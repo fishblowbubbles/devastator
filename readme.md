@@ -1,6 +1,8 @@
+# devastator
+
 Read and follow **ALL** of these instructions carefully, otherwise I might eat you.
 
-# Setting Up
+## Setting Up
 
 Clone this repository.
 ```
@@ -11,23 +13,23 @@ Switch to the `develop` branch.
 ```
 git checkout develop
 ```
-Create and switch to a local branch.
-```
-git checkout -b <your-branch-name>
-```
-Setup your virtual environment (Python 3.6, please) and activate it.
-Make sure to run your scripts from the top-level directory.
+Setup your virtual environment (Python 3.6, please), activate it and install the requirements.
 ```
 pip install virtualenv
 virtualenv venv
 source venv/bin/activate
+pip install -r requirements.txt
+```
+Create and switch to a local branch.
+```
+git checkout -b <your-branch-name>
 ```
 When you've finished, leave your virtual environment. Remember to activate it again the next time you work on this project.
 ```
 deactivate
 ```
 
-# Commit, Merge & Push
+## Commit, Merge & Push
 
 Make sure you are working on your local branch. If you're on the remote branch, do not proceed.
 ```
@@ -72,7 +74,7 @@ git checkout <your-branch-name>
 git stash pop
 ```
 
-# Good Practices
+## Good Practices
 
 1.  Don't work on the remote branch.
 
@@ -80,7 +82,7 @@ git stash pop
 
 3.  Keep the lifespan of your local branch short. Ideally, 1 per new feature, cleaning it up after your commit and starting afresh (with a pull of the remote branch).
 
-# Project Structure
+## Project Structure
 
 ```
 devastator
