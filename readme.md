@@ -2,7 +2,7 @@
 
 Read and follow **ALL** of these instructions carefully, otherwise I might eat you.
 
-## Setting Up
+### Setting Up
 
 Clone this repository.
 ```
@@ -29,7 +29,7 @@ When you've finished, leave your virtual environment. Remember to activate it ag
 deactivate
 ```
 
-## Commit, Merge & Push
+### Commit, Merge & Push
 
 Make sure you are working on your local branch. If you're on the remote branch, do not proceed.
 ```
@@ -44,7 +44,7 @@ Return to your local branch.
 ```
 git checkout <your-branch-name>
 ```
-Update project requirements (from top-level directory). Include your temporary folders in .gitignore, if any.
+Update project requirements (from top-level directory). Include your temporary folders in `.gitignore`, if any.
 ```
 pip freeze > requirements.txt
 ```
@@ -74,7 +74,7 @@ git checkout <your-branch-name>
 git stash pop
 ```
 
-## Good Practices
+### Good Practices
 
 1.  Don't work on the remote branch.
 
@@ -82,34 +82,41 @@ git stash pop
 
 3.  Keep the lifespan of your local branch short. Ideally, 1 per new feature, cleaning it up after your commit and starting afresh (with a pull of the remote branch).
 
-## Project Structure
+### Project Structure
 
 ```
 devastator
 ├── devastator
-│   ├── main.py
-│   ├── robot
-│   │   ├── realsense.py
-│   │   ├── respeaker.py
-│   │   └── romeo.py
-│   ├── sound
-│   └── vision
-│       ├── darknet
-│       ├── darknet.py
-│       └── helpers.py
+│   ├── app
+│   │   └── __init__.py
+│   ├── helpers.py
+│   ├── __init__.py
+│   ├── main.py
+│   ├── robot
+│   │   ├── __init__.py
+│   │   ├── realsense.py
+│   │   ├── respeaker.py
+│   │   └── romeo.py
+│   ├── sound
+│   │   └── __init__.py
+│   └── vision
+│       ├── darknet
+│       ├── darknet.py
+│       ├── helpers.py
+│       └── __init__.py
 ├── docs
 ├── readme.md
 ├── requirements.txt
 ├── scripts
 └── tests
-    ├── robot
-    │   ├── test_realsense.py
-    │   ├── test_respeaker.py
-    │   └── test_romeo.py
-    ├── sound
-    │   ├── test_correlation.py
-    │   └── test_vokaturi.py
-    └── vision
-        ├── test_face_detection.py
-        └── test_yolo.py
+    ├── robot
+    │   ├── test_realsense.py
+    │   ├── test_respeaker.py
+    │   └── test_romeo.py
+    ├── sound
+    │   ├── test_correlation.py
+    │   └── test_vokaturi.py
+    └── vision
+        ├── test_face_detection.py
+        └── test_yolo.py
 ```
