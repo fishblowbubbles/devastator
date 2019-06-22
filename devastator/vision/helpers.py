@@ -38,16 +38,18 @@ def add_circles(img, input_map=INPUT_MAP):
         cv2.circle(img, tuple(point), 5, (0, 0, 255), -1)
 
 
-def add_patches(predictions, rgb, d, names, colors):
-    for label, confidence, coords in predictions:
+def add_patches(preds, rgb, d, names, colors):
+    for label, confidence, coords in preds:
         x, y, width, height = coords
-        label = label.decode("utf-8")
-        color = colors[names.index(label)][:3]
-        color = [int(x * 255) for x in color]
-        distance = round(d[int(y), int(x)] / 1000, 2)
-        s = "{} (Conf.: {}, Dist.: {} m)".format(label, round(confidence, 2), distance)
         x1, y1, = int(x - width / 2), int(y - height / 2)
         x2, y2 = int(x + width / 2), int(y + height / 2)
+
+        label = label.decode("utf-8")
+        distance = round(d[int(y), int(x)] / 1000, 2)
+        color = colors[names.index(label)][:3]
+        color = [int(c * 255) for c in color]
+        s = "{} (Conf.: {}, Dist.: {} m)".format(label, round(confidence, 2), distance)
+
         cv2.putText(rgb, s, (x1 + 5, y1 - 5), cv2.FONT_HERSHEY_DUPLEX, 0.5, color, 1)
         cv2.rectangle(rgb, (x1, y1), (x2, y2), color, 2)
         cv2.circle(rgb, (int(x), int(y)), 5, color, -1)
