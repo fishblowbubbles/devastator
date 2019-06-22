@@ -10,7 +10,7 @@ HOST = "127.0.0.1"
 PORT = 4444
 
 
-def recv_object(client):
+def recv_frame(client):
     packets = []
     while True:
         packet = client.recv(1024)
@@ -21,10 +21,10 @@ def recv_object(client):
     return object
 
 
-def get_frame(host=HOST, port=PORT):
+def get_frames(host=HOST, port=PORT):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
         client.connect((HOST, PORT))
-        rgbd = recv_object(client)
+        rgbd = recv_frame(client)
     return rgbd
 
 
@@ -44,20 +44,23 @@ class D435i:
                 connection, _ = s.accept()
                 self.requests.put(connection)
 
+    def _send_and_shutdown(self, conn, rgbd):
+        try:
+            conn.sendall(pickle.dumps(rgbd))
+            conn.shutdown(socket.SHUT_RDWR)
+        except ConnectionResetError:
+            print("A connection was reset  ...")
+        except BrokenPipeError:
+            print("A pipe broke            ...")
+
     def _process_requests(self, frames):
         while not self.requests.empty():
-            connection = self.requests.get()
+            conn = self.requests.get()
             rgb, d = frames.get_color_frame(), frames.get_depth_frame()
             rgb, d = np.array(rgb.get_data()), np.array(d.get_data())
             d = d.reshape((720, 1280, 1))
             rgbd = np.concatenate((rgb, d), axis=2)
-            try:
-                connection.sendall(pickle.dumps(rgbd))
-                connection.shutdown(socket.SHUT_RDWR)
-            except ConnectionResetError:
-                print("A connection was reset  ...")
-            except BrokenPipeError:
-                print("A pipe broke            ...")
+            self._send_and_shutdown(conn, rgbd)
 
     def run(self):
         server = Process(target=self._start_server)
@@ -76,5 +79,6 @@ if __name__ == "__main__":
     parser.add_argument("--host", default=HOST)
     parser.add_argument("--port", default=PORT)
     args = parser.parse_args()
+
     d435i = D435i(host=args.host, port=int(args.port))
     d435i.run()
