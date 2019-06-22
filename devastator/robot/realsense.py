@@ -44,6 +44,13 @@ class D435i:
                 connection, _ = s.accept()
                 self.requests.put(connection)
 
+    def _frames_to_rgbd(self, frames):
+        rgb, d = frames.get_color_frame(), frames.get_depth_frame()
+        rgb, d = np.array(rgb.get_data()), np.array(d.get_data())
+        d = d.reshape((720, 1280, 1))
+        rgbd = np.concatenate((rgb, d), axis=2)
+        return rgbd
+
     def _send_and_shutdown(self, conn, rgbd):
         try:
             conn.sendall(pickle.dumps(rgbd))
@@ -56,10 +63,7 @@ class D435i:
     def _process_requests(self, frames):
         while not self.requests.empty():
             conn = self.requests.get()
-            rgb, d = frames.get_color_frame(), frames.get_depth_frame()
-            rgb, d = np.array(rgb.get_data()), np.array(d.get_data())
-            d = d.reshape((720, 1280, 1))
-            rgbd = np.concatenate((rgb, d), axis=2)
+            rgbd = self._frames_to_rgbd(frames)
             self._send_and_shutdown(conn, rgbd)
 
     def run(self):
