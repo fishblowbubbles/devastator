@@ -31,14 +31,15 @@ deactivate
 
 ### Commit, Merge & Push
 
-Make sure you are working on your local branch. If you're on the remote branch, do not proceed.
+Make sure you are working on your local branch and using this project's virtual environment. If untrue, do not proceed.
 ```
 git status
 ```
-Switch to remote and pull, to make sure you that you are at the tip of the branch.
+Switch to remote and pull, to make sure you that you are at the tip of the branch. Install the latest requirements.
 ```
 git checkout develop
 git pull origin develop
+pip install -r requirements.txt
 ```
 Return to your local branch.
 ```
