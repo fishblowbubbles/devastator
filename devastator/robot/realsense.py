@@ -11,6 +11,9 @@ PORT = 4444
 
 
 def recv_frame(client):
+    """
+    Receives frame.
+    """
     packets = []
     while True:
         packet = client.recv(1024)
