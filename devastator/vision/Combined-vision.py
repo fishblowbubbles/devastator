@@ -151,20 +151,26 @@ def main():
     #PARAMS
     HOST = "127.0.0.1"
     PORT = 4444
+    face_device = 'CPU' #MYRIAD
+    yolo_device = 'CPU'	#GPU
+
+
     yolo_xml = './TinyV2.xml'
     yolo_bin = './TinyV2.bin'
-    face_xml = './face-detection-adas-0001-fp16.xml'
-    face_bin = './face-detection-adas-0001-fp16.bin'
+    if face_device == 'MYRIAD':
+        face_xml = './face-detection-adas-0001-fp16.xml'
+        face_bin = './face-detection-adas-0001-fp16.bin'
+    else:
+        face_xml = './face-detection-adas-0001.xml'
+        face_bin = './face-detection-adas-0001.bin'
     labels = './custom.names'
     cpu_extension = '/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so'
-    face_device = 'MYRIAD'
-    yolo_device = 'GPU'
 
 
     # ------------- 1. Plugin initialization for specified device and load extensions library if specified -------------
     yolo_plugin = IEPlugin(device=yolo_device, plugin_dirs=args.plugin_dir)
     if 'CPU' in yolo_device:
-        yolo_plugin.add_cpu_extension(args.cpu_extension)
+        yolo_plugin.add_cpu_extension(cpu_extension)
 
     face_plugin = IEPlugin(device=face_device, plugin_dirs=None)
     if 'CPU' in face_device:
