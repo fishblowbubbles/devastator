@@ -304,8 +304,14 @@ def main():
         else:
             request_id = cur_request_id
 
-        yolo_in = cv2.resize(next_frame, (w1, h1))
-        face_in = cv2.resize(next_frame, (w2, h2))
+
+
+        if is_async_mode:
+            yolo_in = cv2.resize(next_frame, (w1, h1))
+            face_in = cv2.resize(next_frame, (w2, h2))
+        else:
+            yolo_in = cv2.resize(frame, (w1, h1))
+            face_in = cv2.resize(frame, (w2, h2))
 
 ##########################################################################################################################
 
@@ -363,6 +369,7 @@ def main():
 
         # Drawing objects with respect to the --yolo_threshold CLI parameter
         objects = [obj for obj in objects if obj['confidence'] >= args.yolo_threshold]
+
 #------------------- Results of yolo detection -------------------------------------
         origin_im_size = frame.shape[:-1]
         for obj in objects:
@@ -373,7 +380,7 @@ def main():
                      min(obj['class_id'] * 7, 255), min(obj['class_id'] * 5, 255))
             det_label = labels_map[obj['class_id']] if labels_map and len(labels_map) >= obj['class_id'] else \
                 str(obj['class_id'])
-
+            print(det_label + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %')
             cv2.rectangle(frame, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), color, 2)
             cv2.putText(frame,
                         "#" + det_label + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %',
