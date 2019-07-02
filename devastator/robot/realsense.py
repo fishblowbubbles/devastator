@@ -7,7 +7,7 @@ import numpy as np
 import pyrealsense2 as rs
 
 HOST = "127.0.0.1"
-PORT = 4444
+PORT = 4321
 
 
 def recv_frame(client):
@@ -84,8 +84,8 @@ class D435i:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default=HOST)
-    parser.add_argument("--port", default=PORT)
+    parser.add_argument("--port", type=int, default=PORT)
     args = parser.parse_args()
 
-    d435i = D435i(host=args.host, port=int(args.port))
+    d435i = D435i(host=args.host, port=args.port)
     d435i.run()

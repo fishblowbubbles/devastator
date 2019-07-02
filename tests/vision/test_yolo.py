@@ -8,13 +8,13 @@ import numpy as np
 
 import devastator.robot.realsense as realsense
 import devastator.vision.darknet as darknet
-from devastator.vision.helpers import load_names, load_colors
+from devastator.vision.helpers import Annotator
 from devastator.helpers import predict, livestream
 
-WEIGHTS = "devastator/vision/darknet/backup/custom_8.weights"
-NAMES = "devastator/vision/darknet/data/custom_8.names"
-DATA = "devastator/vision/darknet/cfg/custom_8.data"
-CFG = "devastator/vision/darknet/cfg/custom_8.cfg"
+PATH2WEIGHTS = "devastator/vision/darknet/backup/custom_8.weights"
+PATH2NAMES = "devastator/vision/darknet/data/custom_8.names"
+PATH2DATA = "devastator/vision/darknet/cfg/custom_8.data"
+PATH2CFG = "devastator/vision/darknet/cfg/custom_8.cfg"
 
 FPS = 24
 THRESH = 0.1
@@ -27,14 +27,12 @@ if __name__ == "__main__":
     parser.add_argument("--thresh", type=float, default=THRESH)
     args = parser.parse_args()
 
-    names = load_names(path=NAMES)
-    colors = load_colors(n_classes=len(names))
-
-    net = darknet.load_net(CFG.encode("ascii"), WEIGHTS.encode("ascii"), 0)
-    meta = darknet.load_meta(DATA.encode("ascii"))
+    net = darknet.load_net(PATH2CFG.encode("ascii"), PATH2WEIGHTS.encode("ascii"), 0)
+    meta = darknet.load_meta(PATH2DATA.encode("ascii"))
+    annotator = Annotator(path2names=PATH2NAMES)
 
     if args.video:
-        livestream(net, meta, names, colors, thresh=args.thresh, fps=args.fps)
+        livestream(net, meta, annotator, thresh=args.thresh, fps=args.fps)
     else:
-        predict(net, meta, names, colors, thresh=args.thresh)
+        predict(net, meta, annotator, thresh=args.thresh)
         cv2.waitKey(0)
