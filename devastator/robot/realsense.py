@@ -6,28 +6,16 @@ from multiprocessing import Process, Queue
 import numpy as np
 import pyrealsense2 as rs
 
+from devastator.robot.helpers import recv_obj
+
 HOST = "127.0.0.1"
-PORT = 4321
-
-
-def recv_frame(client):
-    """
-    Receives frame.
-    """
-    packets = []
-    while True:
-        packet = client.recv(1024)
-        if not packet:
-            break
-        packets.append(packet)
-    object = pickle.loads(b"".join(packets))
-    return object
+PORT = 4444
 
 
 def get_frames(host=HOST, port=PORT):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
         client.connect((HOST, PORT))
-        rgbd = recv_frame(client)
+        rgbd = recv_obj(client)
     return rgbd
 
 
@@ -40,11 +28,11 @@ class D435i:
 
     def _start_server(self):
         print("Starting server         ...")
-        with socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM) as s:
-            s.bind((self.host, self.port))
-            s.listen()
+        with socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM) as server:
+            server.bind((self.host, self.port))
+            server.listen()
             while True:
-                connection, _ = s.accept()
+                connection, _ = server.accept()
                 self.requests.put(connection)
 
     def _frames_to_rgbd(self, frames):
@@ -54,10 +42,10 @@ class D435i:
         rgbd = np.concatenate((rgb, d), axis=2)
         return rgbd
 
-    def _send_and_shutdown(self, conn, rgbd):
+    def _send_and_shutdown(self, connection, rgbd):
         try:
-            conn.sendall(pickle.dumps(rgbd))
-            conn.shutdown(socket.SHUT_RDWR)
+            connection.sendall(pickle.dumps(rgbd))
+            connection.shutdown(socket.SHUT_RDWR)
         except ConnectionResetError:
             print("A connection was reset  ...")
         except BrokenPipeError:
@@ -65,9 +53,9 @@ class D435i:
 
     def _process_requests(self, frames):
         while not self.requests.empty():
-            conn = self.requests.get()
+            connection = self.requests.get()
             rgbd = self._frames_to_rgbd(frames)
-            self._send_and_shutdown(conn, rgbd)
+            self._send_and_shutdown(connection, rgbd)
 
     def run(self):
         server = Process(target=self._start_server)
