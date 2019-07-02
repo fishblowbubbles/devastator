@@ -15,9 +15,9 @@ const float version_number = 1.2;
 //motor parameters
 const float motor_cut_in_1 = 0.105; // experimentally determined
 const float motor_cut_in_2 = 0.105; // experimentally determined
-float motor_gamma = 1.43; //tunes the linearity of the motor's speed vs voltage
-float overshoot = 4.49; // tune the amount of overshoot/kick, useful to overcome stiction at low power setting
-float overshoot_length = 0.0685; // in seconds. tunes the time taken to reach 5% of steady state value
+float motor_gamma = 1.47; //tunes the linearity of the motor's speed vs voltage
+float overshoot = 4.0; // tune the amount of overshoot/kick, useful to overcome stiction at low power setting
+float overshoot_length = 0.068; // in seconds. tunes the time taken to reach 5% of steady state value
 float supply_volt_compensation = 3.34; //compensation fudge factor for voltage loss
 float supply_voltage = 12.6; // use "supply_voltage" serial command to change this over serial
 float motor1_voltage = 5.8; // used to trim the motors
@@ -46,7 +46,9 @@ float filter_s = 1.0 - exp(-3/(overshoot_length*float(sampling_freq)));
 float num[filter_len] = {1.0 + overshoot, -(1.0 + overshoot-filter_s)}; //numerator of filter
 float den[filter_len] = {1.0, filter_s -1.0}; //denominator of filter
 
-
+//watchdog timer to disable motors if commands not received
+int no_command_timeout = 500; //milliseconds, set to zero for no watchdog timer
+long last_command = 0;
 
 // Globals
 String command;
@@ -186,6 +188,10 @@ void parse_command(String com){
     den[0] = 1.0;
     den[1] = filter_s -1.0; //denominator of filter
   }
+  else if(com.startsWith("timeout")){
+    no_command_timeout = com.substring(com.indexOf(" ") + 1).toInt();
+    output = "timeout = " + String(no_command_timeout);
+  }
   else if(com.equals("test")){
     test();
   }
@@ -278,12 +284,16 @@ void loop(){
       if(output.equals("") == false){Serial.println(output);}
       command = "";
       output = "";
+      last_command = millis();
     }
     else{
       command += c;
     }
   }
-//  test();
+  if(millis() - last_command >= no_command_timeout && no_command_timeout != 0){
+    motor1_speed = 0.0;
+    motor2_speed = 0.0;
+  }
 }
 
 
