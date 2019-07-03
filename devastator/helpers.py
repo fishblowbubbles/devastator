@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
 
-import devastator.robot.realsense as realsense
-import devastator.vision.darknet as darknet
+import robot.realsense as realsense
+import vision.darknet as darknet
 
 
 def split_rgbd(rgbd):

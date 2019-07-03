@@ -6,7 +6,7 @@ from multiprocessing import Process, Queue
 import numpy as np
 import pyrealsense2 as rs
 
-from devastator.robot.helpers import recv_obj
+from helpers import recv_obj
 
 HOST = "127.0.0.1"
 PORT = 4444
@@ -20,14 +20,13 @@ def get_frames(host=HOST, port=PORT):
 
 
 class D435i:
-    def __init__(self, host, port):
+    def __init__(self, host=HOST, port=PORT):
         self.host, self.port = host, port
         self.requests = Queue()
         self.pipeline = rs.pipeline()
         self.pipeline.start()
 
     def _start_server(self):
-        print("Starting server         ...")
         with socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM) as server:
             server.bind((self.host, self.port))
             server.listen()
@@ -42,20 +41,20 @@ class D435i:
         rgbd = np.concatenate((rgb, d), axis=2)
         return rgbd
 
-    def _send_and_shutdown(self, connection, rgbd):
+    def _send_frames(self, connection, rgbd):
         try:
             connection.sendall(pickle.dumps(rgbd))
             connection.shutdown(socket.SHUT_RDWR)
         except ConnectionResetError:
-            print("A connection was reset  ...")
+            print("A connection was reset ...")
         except BrokenPipeError:
-            print("A pipe broke            ...")
+            print("A pipe broke ...")
 
     def _process_requests(self, frames):
         while not self.requests.empty():
             connection = self.requests.get()
             rgbd = self._frames_to_rgbd(frames)
-            self._send_and_shutdown(connection, rgbd)
+            self._send_frames(connection, rgbd)
 
     def run(self):
         server = Process(target=self._start_server)

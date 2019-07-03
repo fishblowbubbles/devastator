@@ -1,9 +1,9 @@
 import pickle
 
-def recv_obj(socket):
+def recv_obj(s):
     packets = []
     while True:
-        packet = socket.recv(1024)
+        packet = s.recv(1024)
         if not packet:
             break
         packets.append(packet)
