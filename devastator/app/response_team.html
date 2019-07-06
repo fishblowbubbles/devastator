@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Datatables Example</title>
+  <meta charset="utf-8">
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap4.min.css"/>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/datatables.css') }}">
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="https://cdn.datatables.net/1.10.18/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="/eel.js"></script>
+</head>
+<body>
+<h1>Report Logs</h1>
+<button type="button" onclick="update()" id="btnUpdate" style="background-color:yellow;border-radius: 15px;align-items: center;">Update</button>
+ <div id="wrapper">
+<table id="example" class="display" style="width:100%">
+        <thead>
+            <tr>
+                <th>Time Stamp</th>
+                <th>Robot Coordinates</th>
+                <th>Emotions Present</th>
+                <th>Gunshots</th>
+                <th>Objects Of Interest</th>
+                <th>More Details</th>
+            </tr>
+        </thead>
+    </table>
+<script>
+
+<!--$.ajax({-->
+    <!--type: "GET"-->
+    <!--url: "/"-->
+    <!--})-->
+
+var data = [{
+            "Time Stamp": "12:10:17",
+            "Robot Coordinates": "blahblah",
+            "Threat Direction": "blahblahblah",
+            "Emotions Present": "Fear",
+            "Gunshots": "Detected",
+            "Objects Of Interest": "Handgun: - <p/> Hat: - <p/> Jacket: - <p/> Knife: - <p/> Person: 2 <p/> Rifle: - <p/> Sunglasses: - <p/> Police: -",
+            "More Details": "www.google.com.sg"
+        },
+        {
+            "Time Stamp": "12:05:17",
+            "Robot Coordinates": "blahblah",
+            "Threat Direction": "blahblahblah",
+            "Emotions Present": "Anger",
+            "Gunshots": "Detected",
+            "Objects Of Interest": "Handgun: - <p/> Hat: - <p/> Jacket: - <p/> Knife: - <p/> Person: 2 <p/> Rifle: 2 <p/> Sunglasses: - <p/> Police: -",
+            "More Details": "www.google.com.sg"
+        }
+    ]
+
+
+function setupData() {
+    $(document).ready(function () {
+        var updateTable = $('#example').DataTable({
+            <!--"ajax": {-->
+                <!--// "url": "static/objects2.txt", // This works for the static file-->
+                <!--&lt;!&ndash;"type": "GET",&ndash;&gt;-->
+                <!--"url": "http://127.0.0.1:5000/index_get_data",-->
+                <!--"dataType": "json",-->
+                <!--"dataSrc": "data",-->
+                <!--"contentType":"application/json"-->
+            <!--},-->
+            "columns": [
+                {"data": "Time Stamp"},
+                {"data": "Robot Coordinates"},
+                {"data": "Emotions Present"},
+                {"data": "Gunshots"},
+                {"data": "Objects Of Interest"},
+                {"data": "More Details"}
+            ]
+        });
+        $("#btnUpdate").click(function(){
+        <!--updateTable.fnReloadAjax();-->
+            updateTable.ajax.reload();
+        });
+    });
+
+
+}
+<!--setInterval( function () {-->
+    <!--example_table.ajax.reload(); // user paging is not reset on reload-->
+<!--}, 30000 );-->
+
+$( window ).on( "load", setupData );
+</script>
+ </div>
+</body>
+</html>
