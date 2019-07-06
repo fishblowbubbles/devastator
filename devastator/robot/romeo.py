@@ -7,8 +7,8 @@ from threading import Thread
 
 import serial
 
-import devastator.robot.xpad as xpad
-from devastator.robot.helpers import recv_obj
+import xpad as xpad
+from helpers import recv_obj
 
 HOST = "127.0.0.1"
 PORT = 8888

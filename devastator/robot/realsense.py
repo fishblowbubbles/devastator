@@ -6,7 +6,7 @@ from multiprocessing import Process, Queue
 import numpy as np
 import pyrealsense2 as rs
 
-from devastator.robot.helpers import recv_obj
+from helpers import recv_obj
 
 HOST = "127.0.0.1"
 PORT = 4444
