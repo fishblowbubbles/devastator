@@ -38,5 +38,5 @@ if __name__ == "__main__":
     parser.add_argument("--device-name", default=DEVICE_NAME)
     args = parser.parse_args()
 
-    xpad = XboxOneSPad()
+    xpad = XboxOneSPad(device_name=args.device_name)
     xpad.run()

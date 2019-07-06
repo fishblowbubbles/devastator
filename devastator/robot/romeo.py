@@ -49,9 +49,9 @@ def send_command(command, host=HOST, port=PORT):
 
 
 class Romeo:
-    def __init__(self, host, port, device_id=DEVICE_ID, baudrate=BAUDRATE):
-        device_path = "/dev/serial/by-id/{}".format(device_id)
-        self.serial = serial.Serial(device_path, baudrate)
+    def __init__(self, host=HOST, port=PORT):
+        device_path = "/dev/serial/by-id/{}".format(DEVICE_ID)
+        self.serial = serial.Serial(device_path, BAUDRATE)
         self.host, self.port = host, port
         self.device_path = device_path
         self.enable_motors()
@@ -122,9 +122,9 @@ class Romeo:
     def _handle_dpad_y(self, value):
         if value == DPAD_UP or value == DPAD_DOWN:
             if self.left_trim:
-                self.trim_voltage(L_MOTOR, value)
+                self._trim_voltage(L_MOTOR, value)
             if self.right_trim:
-                self.trim_voltage(R_MOTOR, value)
+                self._trim_voltage(R_MOTOR, value)
 
     def _handle_a_btn(self, value):
         if value == BTN_DOWN:
@@ -147,33 +147,37 @@ class Romeo:
                 self.callbacks[code](value)
 
     def _js_movement(self):
-        forward_speed, turn_speed = self.state[L_JS_Y], self.state[R_JS_X]
+        forward_speed = self.state[L_JS_Y]
+        turn_speed = self.state[R_JS_X]
         l_motor_speed = forward_speed - turn_speed
         r_motor_speed = forward_speed + turn_speed
         self.set_motors(l_motor_speed, r_motor_speed)
 
     def _trig_movement(self):
-        l_motor_speed = self.state[L_TRIG]
-        r_motor_speed = self.state[R_TRIG]
+        l_motor_speed = self.state[L_TRIG] * self.direction
+        r_motor_speed = self.state[R_TRIG] * self.direction
         self.set_motors(l_motor_speed, r_motor_speed)
 
     def _send_serial(self, message):
         message = "{}\n".format(message).encode("utf-8")
         self.serial.write(message)
 
-    def set_overshoot(self, magnitude, length):
-        message = "{} {} {}".format(OVERSHOOT, magnitude, length)
-        self._send_serial(message)
+    def _set_overshoot(self, magnitude, length):
+        # message = "{} {} {}".format(OVERSHOOT, magnitude, length)
+        # self._send_serial(message)
+        pass
 
-    def set_gamma(self, gamma):
-        message = "{} {}".format(GAMMA, gamma)
-        self._send_serial(message)
+    def _set_gamma(self, gamma):
+        # message = "{} {}".format(GAMMA, gamma)
+        # self._send_serial(message)
+        pass
 
-    def set_timeout(self, millis=300):
-        message = "{} {}".format(TIMEOUT, millis)
-        self._send_serial(message)
+    def _set_timeout(self, millis=300):
+        # message = "{} {}".format(TIMEOUT, millis)
+        # self._send_serial(message)
+        pass
 
-    def trim_voltage(self, motor, direction, voltage_delta=0.05):
+    def _trim_voltage(self, motor, direction, voltage_delta=0.05):
         # message = "{} {} {}".format(motor, direction, voltage_delta)
         # self._send_serial(message)
         pass
@@ -188,7 +192,6 @@ class Romeo:
         self._send_serial(TEST)
 
     def set_speed(self, motor, speed):
-        speed *= self.direction
         message = "{} {:.3f}".format(int(motor), float(speed))
         self._send_serial(message)
 
@@ -216,7 +219,6 @@ class Romeo:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--device-id", default=DEVICE_ID)
     parser.add_argument("--host", default=HOST)
     parser.add_argument("--port", type=int, default=PORT)
     args = parser.parse_args()
