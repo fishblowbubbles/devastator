@@ -7,6 +7,7 @@ from threading import Thread
 
 import serial
 
+import devastator.robot.xpad as xpad
 from devastator.robot.helpers import recv_obj
 
 HOST = "127.0.0.1"
@@ -17,20 +18,6 @@ BAUDRATE = 115200
 
 ENABLE, DISABLE, TEST = "enable", "disable", "test"
 GAMMA, OVERSHOOT, TIMEOUT, TRIM = "gamma", "overshoot", "timeout", "trim"
-
-L_JS_X, L_JS_Y, L_TRIG = 0, 1, 2
-R_JS_X, R_JS_Y, R_TRIG = 3, 4, 5
-DPAD_X, DPAD_Y = 16, 17
-A_BTN, B_BTN = 304, 305
-X_BTN, Y_BTN = 307, 308
-L_BUMP, R_BUMP = 310, 311
-SELECT, START = 314, 315
-
-BTN_UP, BTN_DOWN = 0, 1
-DPAD_UP, DPAD_DOWN = 1, -1
-
-JS_MIN, JS_MAX, JS_THRESH = -32768, 32767, 0.15
-TRIG_MAX = 1023
 
 L_MOTOR, R_MOTOR = 1, 2
 L_POLARITY, R_POLARITY = -1, 1
@@ -66,72 +53,77 @@ class Romeo:
         self.left_trim = next(self.toggle_left_trim)
         self.right_trim = next(self.toggle_right_trim)
 
-        self.state = {L_JS_Y: 0, L_TRIG: 0, R_JS_X: 0, R_TRIG: 0}
+        self.state = {
+            xpad.L_JS_Y: 0,
+            xpad.L_TRIG: 0,
+            xpad.R_JS_X: 0,
+            xpad.R_TRIG: 0
+        }
         self.callbacks = {
-            L_JS_Y: self._handle_left_joystick_y,   # forward-backward movement
-            L_TRIG: self._handle_left_trigger,      # left motor power
-            L_BUMP: self._handle_left_bumper,       # toggle left motor trimming
-            R_JS_X: self._handle_right_joystick_x,  # left-right movement
-            R_TRIG: self._handle_right_trigger,     # right motor power
-            R_BUMP: self._handle_right_bumper,      # toggle right motor trimming
-            DPAD_Y: self._handle_dpad_y,            # up-down motor trimming
-            A_BTN : self._handle_a_btn,             # change direction
-            B_BTN : self._handle_b_btn,             # change control mode
-            L_JS_X: self._handle_unmapped,
-            R_JS_Y: self._handle_unmapped,
-            X_BTN : self._handle_unmapped,
-            Y_BTN : self._handle_unmapped,
-            DPAD_X: self._handle_unmapped,
-            SELECT: self._handle_unmapped,
-            START : self._handle_unmapped,
+            xpad.L_JS_Y: self._handle_left_joystick_y,   # forward-backward movement
+            xpad.L_TRIG: self._handle_left_trigger,      # left motor power
+            xpad.L_BUMP: self._handle_left_bumper,       # toggle left motor trimming
+            xpad.R_JS_X: self._handle_right_joystick_x,  # left-right movement
+            xpad.R_TRIG: self._handle_right_trigger,     # right motor power
+            xpad.R_BUMP: self._handle_right_bumper,      # toggle right motor trimming
+            xpad.DPAD_Y: self._handle_dpad_y,            # up-down motor trimming
+            xpad.A_BTN : self._handle_a_btn,             # change direction
+            xpad.B_BTN : self._handle_b_btn,             # change control mode
+            xpad.L_JS_X: self._handle_unmapped,
+            xpad.R_JS_Y: self._handle_unmapped,
+            xpad.X_BTN : self._handle_unmapped,
+            xpad.Y_BTN : self._handle_unmapped,
+            xpad.DPAD_X: self._handle_unmapped,
+            xpad.SELECT: self._handle_unmapped,
+            xpad.START : self._handle_unmapped,
         }
 
     def _normalize_js(self, value):
-        value = value / JS_MAX if value >= 0 else value / (-JS_MIN)
-        value = value if abs(value) > JS_THRESH else 0
+        value = value / xpad.JS_MAX if value >= 0 else value / (-xpad.JS_MIN)
+        value = value if abs(value) > xpad.JS_THRESH else 0
         return value
 
     def _normalize_trig(self, value):
-        value = value / TRIG_MAX
+        value = value / xpad.TRIG_MAX
         return value
 
     def _handle_left_joystick_y(self, value):
         value = self._normalize_js(value)
-        self.state[L_JS_Y] = -value
+        self.state[xpad.L_JS_Y] = -value
 
     def _handle_left_trigger(self, value):
         value = self._normalize_trig(value)
-        self.state[L_TRIG] = value
+        self.state[xpad.L_TRIG] = value
 
     def _handle_left_bumper(self, value):
-        if value == BTN_DOWN:
+        if value == xpad.BTN_DOWN:
             self.left_trim = next(self.toggle_left_trim)
 
     def _handle_right_joystick_x(self, value):
         value = self._normalize_js(value)
-        self.state[R_JS_X] = value
+        self.state[xpad.R_JS_X] = value
 
     def _handle_right_trigger(self, value):
         value = self._normalize_trig(value)
-        self.state[R_TRIG] = value
+        self.state[xpad.R_TRIG] = value
 
     def _handle_right_bumper(self, value):
-        if value == BTN_DOWN:
+        if value == xpad.BTN_DOWN:
             self.right_trim = next(self.toggle_right_trim)
 
     def _handle_dpad_y(self, value):
-        if value == DPAD_UP or value == DPAD_DOWN:
+        if value == xpad.DPAD_UP or value == xpad.DPAD_DOWN:
             if self.left_trim:
                 self._trim_voltage(L_MOTOR, value)
             if self.right_trim:
                 self._trim_voltage(R_MOTOR, value)
 
     def _handle_a_btn(self, value):
-        if value == BTN_DOWN:
+        if value == xpad.BTN_DOWN:
             self.direction = next(self.change_direction)
 
     def _handle_b_btn(self, value):
-        if value == BTN_DOWN:
+        if value == xpad.BTN_DOWN:
             self.control_mode = next(self.change_control_mode)
 
     def _handle_unmapped(self, value):
@@ -147,15 +139,15 @@ class Romeo:
                 self.callbacks[code](value)
 
     def _js_movement(self):
-        forward_speed = self.state[L_JS_Y]
-        turn_speed = self.state[R_JS_X]
+        forward_speed = self.state[xpad.L_JS_Y]
+        turn_speed = self.state[xpad.R_JS_X]
         l_motor_speed = forward_speed - turn_speed
         r_motor_speed = forward_speed + turn_speed
         self.set_motors(l_motor_speed, r_motor_speed)
 
     def _trig_movement(self):
-        l_motor_speed = self.state[L_TRIG] * self.direction
-        r_motor_speed = self.state[R_TRIG] * self.direction
+        l_motor_speed = self.state[xpad.L_TRIG] * self.direction
+        r_motor_speed = self.state[xpad.R_TRIG] * self.direction
         self.set_motors(l_motor_speed, r_motor_speed)
 
     def _send_serial(self, message):

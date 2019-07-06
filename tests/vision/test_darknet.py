@@ -8,8 +8,7 @@ import numpy as np
 
 import devastator.robot.realsense as realsense
 import devastator.vision.darknet as darknet
-from devastator.vision.helpers import Annotator
-from devastator.helpers import predict, livestream
+from devastator.vision.helpers import Annotator, predict, livestream
 
 PATH2WEIGHTS = "devastator/vision/darknet/backup/custom_8.weights"
 PATH2NAMES = "devastator/vision/darknet/data/custom_8.names"
