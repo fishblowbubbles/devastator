@@ -7,7 +7,7 @@ from threading import Thread
 
 import serial
 
-from helpers import recv_obj
+from devastator.robot.helpers import recv_obj
 
 HOST = "127.0.0.1"
 PORT = 8888

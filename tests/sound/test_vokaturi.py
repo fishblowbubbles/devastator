@@ -1,12 +1,12 @@
 
-#import sys
+import sys
 import scipy.io.wavfile
-import os 
+import os
 
-#sys.path.append("../api")
-import Vokaturi
+sys.path.append(".")
+from devastator.sound.Vokaturi_Emotion_Detect.examples import Vokaturi
 import glob
-    
+
 
 def vokaturiFunc(filename, emotion):
     #print ("Loading library...")
@@ -45,31 +45,31 @@ def vokaturiFunc(filename, emotion):
 #        print ("Sad: %.3f" % emotionProbabilities.sadness)
 #        print ("Angry: %.3f" % emotionProbabilities.anger)
 #        print ("Fear: %.3f" % emotionProbabilities.fear)
-        
-        Neutrality = emotionProbabilities.neutrality 
+
+        Neutrality = emotionProbabilities.neutrality
         Happiness = emotionProbabilities.happiness
         Sadness = emotionProbabilities.sadness
         Anger = emotionProbabilities.anger
         Fear = emotionProbabilities.fear
         pri_emotion = max(Neutrality,Happiness,Sadness,Anger,Fear)
-    
+
         if Neutrality == pri_emotion:
             pred_emo = 'Neutrality'
         elif Happiness == pri_emotion:
             pred_emo = 'Happiness'
         elif Sadness == pri_emotion:
-            pred_emo = 'Sadness' 
+            pred_emo = 'Sadness'
         elif Anger == pri_emotion:
             pred_emo = 'Anger'
         elif Fear == pri_emotion:
             pred_emo = 'Fear'
-        
-        if pred_emo == emotion: 
+
+        if pred_emo == emotion:
             correct_preds += 1
 
     voice.destroy()
     return correct_preds
-    
+
 fem_angry_path = "./Female/Angry/"
 fem_fear_path = "./Female/Fear/"
 fem_happy_path = "./Female/Happy/"
@@ -85,7 +85,7 @@ male_sad_path = "./Male/Sad/"
 correct_preds = 0
 
 fem_angry_correct = 0
-fem_fear_correct = 0 
+fem_fear_correct = 0
 fem_happy_correct = 0
 fem_neutral_correct = 0
 fem_sad_correct = 0
@@ -118,68 +118,68 @@ total = 864
 for filename in glob.glob(os.path.join(fem_angry_path, '*.wav')):
     vokaturiFunc(filename, 'Anger')
     fem_angry_correct = correct_preds
-    fem_anger_accuracy = (fem_angry_correct/total_fem_angry) * 100 
+    fem_anger_accuracy = (fem_angry_correct/total_fem_angry) * 100
     print(fem_anger_accuracy)
-    
+
 for filename in glob.glob(os.path.join(fem_fear_path, '*.wav')):
     vokaturiFunc(filename, 'Fear')
     fem_fear_correct = correct_preds
-    fem_fear_accuracy = (fem_fear_correct/total_fem_fear) * 100 
+    fem_fear_accuracy = (fem_fear_correct/total_fem_fear) * 100
     print(fem_fear_accuracy)
-       
+
 for filename in glob.glob(os.path.join(fem_happy_path, '*.wav')):
     vokaturiFunc(filename, 'Happiness')
     fem_happy_correct = correct_preds
-    fem_happy_accuracy = (fem_happy_correct/total_fem_happy) * 100 
+    fem_happy_accuracy = (fem_happy_correct/total_fem_happy) * 100
     print(fem_happy_accuracy)
-            
+
 for filename in glob.glob(os.path.join(fem_angry_path, '*.wav')):
     vokaturiFunc(filename, 'Neutrality')
     fem_neutral_correct = correct_preds
-    fem_neutral_accuracy = (fem_neutral_correct/total_fem_neutral) * 100 
+    fem_neutral_accuracy = (fem_neutral_correct/total_fem_neutral) * 100
     print(fem_neutral_accuracy)
-       
+
 for filename in glob.glob(os.path.join(fem_sad_path, '*.wav')):
     vokaturiFunc(filename, 'Sadness')
     fem_sad_correct = correct_preds
-    fem_sad_accuracy = (fem_sad_correct/total_fem_sad) * 100 
+    fem_sad_accuracy = (fem_sad_correct/total_fem_sad) * 100
     print(fem_sad_accuracy)
-    
+
 total_fem_correct = fem_angry_correct + fem_fear_correct + fem_happy_correct + fem_neutral_correct +  fem_sad_correct
 total_fem_acc = (total_fem_correct/total_fem) * 100
 print(total_fem_acc)
 #################
-    
+
 for filename in glob.glob(os.path.join(male_angry_path, '*.wav')):
     vokaturiFunc(filename, 'Anger')
     male_angry_correct = correct_preds
-    male_anger_accuracy = (male_angry_correct/total_male_angry) * 100 
+    male_anger_accuracy = (male_angry_correct/total_male_angry) * 100
     print(male_anger_accuracy)
-    
+
 for filename in glob.glob(os.path.join(male_fear_path, '*.wav')):
     vokaturiFunc(filename, 'Fear')
     male_fear_correct = correct_preds
-    male_fear_accuracy = (male_fear_correct/total_male_fear) * 100 
+    male_fear_accuracy = (male_fear_correct/total_male_fear) * 100
     print(male_fear_accuracy)
-       
+
 for filename in glob.glob(os.path.join(male_happy_path, '*.wav')):
     vokaturiFunc(filename, 'Happiness')
     male_happy_correct = correct_preds
-    male_happy_accuracy = (male_happy_correct/total_male_happy) * 100 
+    male_happy_accuracy = (male_happy_correct/total_male_happy) * 100
     print(male_happy_accuracy)
-            
+
 for filename in glob.glob(os.path.join(male_angry_path, '*.wav')):
     vokaturiFunc(filename, 'Neutrality')
     male_neutral_correct = correct_preds
-    male_neutral_accuracy = (male_neutral_correct/total_male_neutral) * 100 
+    male_neutral_accuracy = (male_neutral_correct/total_male_neutral) * 100
     print(male_neutral_accuracy)
-       
+
 for filename in glob.glob(os.path.join(male_sad_path, '*.wav')):
     vokaturiFunc(filename, 'Sadness')
     male_sad_correct = correct_preds
-    male_sad_accuracy = (male_sad_correct/total_male_sad) * 100 
+    male_sad_accuracy = (male_sad_correct/total_male_sad) * 100
     print(male_sad_accuracy)
-   
+
 total_male_correct = male_angry_correct + male_fear_correct + male_happy_correct + male_neutral_correct +  male_sad_correct
 total_male_acc = (total_male_correct/total_male) * 100
 print(total_male_acc)
