@@ -10,14 +10,16 @@ import serial
 import xpad as xpad
 from helpers import recv_obj
 
-HOST = "127.0.0.1"
+# HOST = "192.168.1.178"  # UP-Squared 1
+HOST = "192.168.1.232"  # UP-Squared 2
 PORT = 8888
 
 DEVICE_ID = "usb-Arduino_LLC_Arduino_Leonardo-if00"
 BAUDRATE = 115200
 
 ENABLE, DISABLE, TEST = "enable", "disable", "test"
-GAMMA, OVERSHOOT, TIMEOUT, TRIM = "gamma", "overshoot", "timeout", "trim"
+OVERSHOOT, TIMEOUT, TRIM = "overshoot", "timeout", "trim"
+GAMMA = 0.5
 
 L_MOTOR, R_MOTOR = 1, 2
 L_POLARITY, R_POLARITY = -1, 1
@@ -79,8 +81,12 @@ class Romeo:
         }
 
     def _normalize_js(self, value):
-        value = value / xpad.JS_MAX if value >= 0 else value / (-xpad.JS_MIN)
-        value = value if abs(value) > xpad.JS_THRESH else 0
+        value = ((value / xpad.JS_MAX) - xpad.JS_THRESH
+                 if value >= 0
+                 else (value / (-xpad.JS_MIN) + xpad.JS_THRESH))
+        value = (math.pow(value / (1 - xpad.JS_THRESH), GAMMA)
+                 if abs(value) > xpad.JS_THRESH
+                 else 0)
         return value
 
     def _normalize_trig(self, value):
@@ -156,11 +162,6 @@ class Romeo:
 
     def _set_overshoot(self, magnitude, length):
         # message = "{} {} {}".format(OVERSHOOT, magnitude, length)
-        # self._send_serial(message)
-        pass
-
-    def _set_gamma(self, gamma):
-        # message = "{} {}".format(GAMMA, gamma)
         # self._send_serial(message)
         pass
 
