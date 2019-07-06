@@ -28,7 +28,7 @@ JS, TRIG = 0, 1
 
 
 def send_command(command, host=HOST, port=PORT):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
+    with socket.socket() as client:
         try:
             client.connect((HOST, PORT))
             client.sendall(pickle.dumps(command))
@@ -83,8 +83,7 @@ class Romeo:
     def _gamma_func(self, value):
         sign = (1, -1)[value < 0]
         value = (abs(value) - xpad.JS_THRESH) / (1 - xpad.JS_THRESH)
-        value = value ** GAMMA
-        value *= sign
+        value = sign * (value ** GAMMA)
         return value
 
     def _normalize_js(self, value):
@@ -142,14 +141,7 @@ class Romeo:
     def _handle_unmapped(self, value):
         pass
 
-    def _start_server(self):
-        with socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM) as server:
-            server.bind((self.host, self.port))
-            server.listen()
-            while True:
-                connection, _ = server.accept()
-                code, value = recv_obj(connection)
-                self.callbacks[code](value)
+
 
     def _js_movement(self):
         forward_speed = self.state[xpad.L_JS_Y]
@@ -181,6 +173,15 @@ class Romeo:
         # message = "{} {} {}".format(motor, direction, voltage_delta)
         # self._send_serial(message)
         pass
+
+    def _start_server(self):
+        with socket.socket() as server:
+            server.bind((self.host, self.port))
+            server.listen()
+            while True:
+                connection, _ = server.accept()
+                code, value = recv_obj(connection)
+                self.callbacks[code](value)
 
     def enable_motors(self):
         self._send_serial(ENABLE)

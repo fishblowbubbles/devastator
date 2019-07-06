@@ -13,7 +13,7 @@ PORT = 4444
 
 
 def get_frames(host=HOST, port=PORT):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
+    with socket.socket() as client:
         client.connect((HOST, PORT))
         rgbd = recv_obj(client)
     return rgbd
@@ -25,14 +25,6 @@ class D435i:
         self.requests = Queue()
         self.pipeline = rs.pipeline()
         self.pipeline.start()
-
-    def _start_server(self):
-        with socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM) as server:
-            server.bind((self.host, self.port))
-            server.listen()
-            while True:
-                connection, _ = server.accept()
-                self.requests.put(connection)
 
     def _frames_to_rgbd(self, frames):
         rgb, d = frames.get_color_frame(), frames.get_depth_frame()
@@ -55,6 +47,14 @@ class D435i:
             connection = self.requests.get()
             rgbd = self._frames_to_rgbd(frames)
             self._send_frames(connection, rgbd)
+
+    def _start_server(self):
+        with socket.socket() as server:
+            server.bind((self.host, self.port))
+            server.listen()
+            while True:
+                connection, _ = server.accept()
+                self.requests.put(connection)
 
     def run(self):
         server = Process(target=self._start_server)
