@@ -80,11 +80,18 @@ class Romeo:
             xpad.START : self._handle_unmapped,
         }
 
+    def _gamma_func(self, value):
+        sign = (1, -1)[value < 0]
+        value = (abs(value) - xpad.JS_THRESH) / (1 - xpad.JS_THRESH)
+        value = value ** GAMMA
+        value *= sign
+        return value
+
     def _normalize_js(self, value):
-        value = ((value / xpad.JS_MAX) - xpad.JS_THRESH
+        value = ((value / xpad.JS_MAX)
                  if value >= 0
-                 else (value / (-xpad.JS_MIN) + xpad.JS_THRESH))
-        value = (math.pow(value / (1 - xpad.JS_THRESH), GAMMA)
+                 else (value / (-xpad.JS_MIN)))
+        value = (self._gamma_func(value)
                  if abs(value) > xpad.JS_THRESH
                  else 0)
         return value
@@ -94,8 +101,8 @@ class Romeo:
         return value
 
     def _handle_left_joystick_y(self, value):
-        value = self._normalize_js(value)
-        self.state[xpad.L_JS_Y] = -value
+        value = self._normalize_js(-value)
+        self.state[xpad.L_JS_Y] = value
 
     def _handle_left_trigger(self, value):
         value = self._normalize_trig(value)
@@ -106,7 +113,7 @@ class Romeo:
             self.left_trim = next(self.toggle_left_trim)
 
     def _handle_right_joystick_x(self, value):
-        value = self._normalize_js(value)
+        value = self._normalize_js(-value)
         self.state[xpad.R_JS_X] = value
 
     def _handle_right_trigger(self, value):
