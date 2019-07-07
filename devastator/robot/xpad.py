@@ -36,15 +36,11 @@ class XPad:
             message = "{} not found".format(device_name)
             raise Exception(message)
 
-    def _handle_event(self, event):
-        if event.type in [ecodes.EV_KEY, ecodes.EV_ABS]:
-            command = (event.code, event.value)
-            romeo.send_command(command)
-
     def run(self):
-        while True:
-            for event in self.device.read_loop():
-                self._handle_event(event)
+        for event in self.device.read_loop():
+            if event.type in [ecodes.EV_KEY, ecodes.EV_ABS]:
+                command = (event.code, event.value)
+                romeo.send_command(command)
 
 
 if __name__ == "__main__":

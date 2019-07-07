@@ -4,6 +4,8 @@ import socket
 import cv2
 import numpy as np
 
+import darknet
+
 INPUT_MAP = [[200, 10], [1080, 10], [1270, 710], [10, 710]]
 OUTPUT_MAP = [[0, 0], [1280, 0], [1280, 720], [0, 720]]
 RESOLUTION = (1280, 720)
