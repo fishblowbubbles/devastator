@@ -7,21 +7,17 @@ import sys
 import serial
 
 import xpad as xpad
-from helpers import recv_obj
+from helpers import ConfigFile, recv_obj
 
-# HOST = "localhost"
+CONFIG = ConfigFile("config.ini")
+
+HOST = "localhost"
 # HOST = "192.168.1.178"  # UP-Squared 1
-HOST = "192.168.1.232"  # UP-Squared 2
+# HOST = "192.168.1.232"  # UP-Squared 2
 PORT = 8888
 
 DEVICE_ID = "usb-Arduino_LLC_Arduino_Leonardo-if00"
-BAUDRATE = 115200
-
-ENABLE, DISABLE, TEST = "enable", "disable", "test"
-TIMEOUT, TRIM = "timeout", "trim"
-GAMMA, OVERSHOOT = 0.5, 4
-
-DEFAULT_VOLTAGE, MAX_VOLTAGE = 4.0, 6.5
+ENABLE, DISABLE = "enable", "disable"
 
 L_MOTOR, R_MOTOR = 1, 2
 L_POLARITY, R_POLARITY = -1, 1
@@ -40,20 +36,21 @@ def send_command(command, host=HOST, port=PORT):
 
 
 class Romeo:
-    def __init__(self, host=HOST, port=PORT):
+    def __init__(self, config=CONFIG, host=HOST, port=PORT):
         device_path = "/dev/serial/by-id/{}".format(DEVICE_ID)
-        self.serial = serial.Serial(device_path, BAUDRATE)
-        self.host, self.port = host, port
-        self.device_path = device_path
+        self.serial = serial.Serial(device_path, config.get("romeo", "baudrate"))
+        self.device_path, self.config = device_path, config
+        self.host, self.port = HOST, PORT
 
-        self.set_overshoot(OVERSHOOT)
-        self.set_voltage(L_MOTOR, DEFAULT_VOLTAGE)
-        self.set_voltage(R_MOTOR, DEFAULT_VOLTAGE)
+        self.gamma = float(config.get("romeo", "gamma"))
+        self.max_voltage = float(config.get("romeo", "maxvoltage"))
+        self.set_overshoot(int(config.get("romeo", "overshoot")))
+        self.set_voltage(L_MOTOR, float(config.get("romeo", "leftvoltage")))
+        self.set_voltage(R_MOTOR, float(config.get("romeo", "rightvoltage")))
         self.enable_motors()
 
         self.change_direction = itertools.cycle([1, -1])
         self.change_control_mode = itertools.cycle(CONTROL_MODES)
-
         self.direction = next(self.change_direction)
         self.control_mode = next(self.change_control_mode)
 
@@ -70,8 +67,8 @@ class Romeo:
             xpad.R_TRIG: self._handle_right_trigger,     # right motor
             xpad.DPAD_X: self._handle_dpad_x,            # asymmetrical voltage trimming
             xpad.DPAD_Y: self._handle_dpad_y,            # symmetrical voltage trimming
-            xpad.A_BTN : self._handle_a_btn,             # change direction
-            xpad.B_BTN : self._handle_b_btn,             # change control mode
+            xpad.A_BTN : self._handle_a_btn,             # toggle direction
+            xpad.B_BTN : self._handle_b_btn,             # toggle control mode
             xpad.L_BUMP: self._handle_unmapped,
             xpad.R_BUMP: self._handle_unmapped,
             xpad.L_JS_X: self._handle_unmapped,
@@ -87,12 +84,13 @@ class Romeo:
     def _gamma_func(self, value):
         sign = (-1, 1)[value >= 0]
         value = (abs(value) - xpad.JS_THRESH) / (1 - xpad.JS_THRESH)
-        value = sign * (value ** GAMMA)
+        value = sign * (value ** self.gamma)
         return value
 
     def _normalize_js(self, value):
         value = (value / xpad.JS_MAX, value / (-xpad.JS_MIN))[value >= 0]
-        value = (0, self._gamma_func(value))[abs(value) > xpad.JS_THRESH]
+        if abs(value) <= xpad.JS_THRESH: return 0
+        value = self._gamma_func(value)
         return value
 
     def _normalize_trig(self, value):
@@ -119,8 +117,8 @@ class Romeo:
 
     def _handle_dpad_x(self, value):
         if value == xpad.DPAD_UP or value == xpad.DPAD_DOWN:
-            self.trim_voltage(L_MOTOR, -value)
-            self.trim_voltage(R_MOTOR, value)
+            self.trim_voltage(L_MOTOR, value)
+            self.trim_voltage(R_MOTOR, -value)
 
     def _handle_dpad_y(self, value):
         if value == xpad.DPAD_UP or value == xpad.DPAD_DOWN:
@@ -140,10 +138,6 @@ class Romeo:
 
     def _handle_unmapped(self, value):
         pass
-
-    def _update_state(self, connection):
-        code, value = recv_obj(connection)
-        self.callbacks[code](value)
 
     """ MOVEMENT CONTROLS """
 
@@ -204,13 +198,14 @@ class Romeo:
         return voltage
 
     def set_voltage(self, motor, voltage):
+        voltage = round((voltage, self.max_voltage)[voltage > self.max_voltage], 2)
+        self.config.save("romeo", "{}voltage".format(("left", "right")[motor - 1]), voltage)
+        print("{} Motor Voltage   = {}".format(("L", "R")[motor - 1], voltage))
         message = "motor{}_voltage {}".format(motor, voltage)
         self._send_serial(message)
-        print("{} Motor Voltage   = {}".format(("L", "R")[motor - 1], voltage))
 
     def trim_voltage(self, motor, direction, voltage_delta=0.05):
         voltage = self.get_voltage(motor) + direction * voltage_delta
-        voltage = round((voltage, MAX_VOLTAGE)[voltage > MAX_VOLTAGE], 2)
         self.set_voltage(motor, voltage)
 
     """ MAIN LOOP """
@@ -222,7 +217,8 @@ class Romeo:
             try:
                 while True:
                     connection, _ = server.accept()
-                    self._update_state(connection)
+                    code, value = recv_obj(connection)
+                    self.callbacks[code](value)
                     self._execute_movement()
             finally:
                 self.stop_motors()
