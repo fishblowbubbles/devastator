@@ -46,11 +46,11 @@ class XPad:
         for event in pygame.event.get():
             if event.type == AXIS:
                 events[AXIS][event.axis] = event.value
-            if event.type == HAT:
+            elif event.type == HAT:
                 events[HAT][event.hat] = event.value
-            if event.type == BTN_UP:
+            elif event.type == BTN_UP:
                 events[BTN_UP][event.button] = UP
-            if event.type == BTN_DOWN:
+            elif event.type == BTN_DOWN:
                 events[BTN_DOWN][event.button] = DOWN
         return events
 

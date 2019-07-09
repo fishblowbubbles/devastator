@@ -67,28 +67,14 @@ class Romeo:
                 xpad.L_JS_Y: self._handle_left_joystick_y,
                 xpad.L_TRIG: self._handle_left_trigger,
                 xpad.R_JS_X: self._handle_right_joystick_x,
-                xpad.R_TRIG: self._handle_right_trigger,
-                xpad.L_JS_X: self._handle_unmapped,
-                xpad.R_JS_Y: self._handle_unmapped
+                xpad.R_TRIG: self._handle_right_trigger
             },
             xpad.HAT: {
-                xpad.DPAD: self._handle_dpad,
-            },
-            xpad.BTN_UP: {
-                xpad.A_BTN : self._handle_unmapped,
-                xpad.B_BTN : self._handle_unmapped,
-                xpad.X_BTN : self._handle_unmapped,
-                xpad.Y_BTN : self._handle_unmapped,
-                xpad.L_BUMP: self._handle_unmapped,
-                xpad.R_BUMP: self._handle_unmapped,
+                xpad.DPAD: self._handle_dpad
             },
             xpad.BTN_DOWN: {
                 xpad.A_BTN : self._handle_a_btn,
-                xpad.B_BTN : self._handle_b_btn,
-                xpad.X_BTN : self._handle_unmapped,
-                xpad.Y_BTN : self._handle_unmapped,
-                xpad.L_BUMP: self._handle_unmapped,
-                xpad.R_BUMP: self._handle_unmapped,
+                xpad.B_BTN : self._handle_b_btn
             }
         }
 
@@ -115,7 +101,10 @@ class Romeo:
     def _handle_events(self, events):
         for key, inputs in events.items():
             for event, value in inputs.items():
-                self.callbacks[key][event](value)
+                try:
+                    self.callbacks[key][event](value)
+                except KeyError:
+                    continue
 
     def _handle_left_joystick_y(self, value):
         value = self._normalize_js(-value)
@@ -152,9 +141,6 @@ class Romeo:
         if value == xpad.BTN_DOWN:
             self.control_mode = next(self.change_control_mode)
             print("Control Mode      = {}".format(self.control_mode))
-
-    def _handle_unmapped(self, value):
-        pass
 
     """ MOVEMENT CONTROLS """
 
