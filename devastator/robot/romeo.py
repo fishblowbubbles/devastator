@@ -61,6 +61,7 @@ class Romeo:
             xpad.R_JS_X: 0,
             xpad.R_TRIG: 0
         }
+
         self.callbacks = {
             xpad.AXIS: {
                 xpad.L_JS_Y: self._handle_left_joystick_y,
@@ -91,25 +92,6 @@ class Romeo:
             }
         }
 
-        #                                               self.callbacks = {
-        #     xpad.L_JS_Y: self._handle_left_joystick_y,   # throttle
-        #     xpad.L_TRIG: self._handle_left_trigger,      # left motor
-        #     xpad.R_JS_X: self._handle_right_joystick_x,  # steering
-        #     xpad.R_TRIG: self._handle_right_trigger,     # right motor
-        #     xpad.DPAD_X: self._handle_dpad_x,            # asymmetrical voltage trimming
-        #     xpad.DPAD_Y: self._handle_dpad_y,            # symmetrical voltage trimming
-        #     xpad.A_BTN : self._handle_a_btn,             # toggle direction
-        #     xpad.B_BTN : self._handle_b_btn,             # toggle control mode
-        #     xpad.L_BUMP: self._handle_unmapped,
-        #     xpad.R_BUMP: self._handle_unmapped,
-        #     xpad.L_JS_X: self._handle_unmapped,
-        #     xpad.R_JS_Y: self._handle_unmapped,
-        #     xpad.X_BTN : self._handle_unmapped,
-        #     xpad.Y_BTN : self._handle_unmapped,
-        #     xpad.SELECT: self._handle_unmapped,
-        #     xpad.START : self._handle_unmapped,
-        # }
-
     """ MATH HELPERS """
 
     def _gamma_func(self, value):
@@ -119,13 +101,11 @@ class Romeo:
         return value
 
     def _normalize_js(self, value):
-        # value = (value / xpad.JS_MAX, value / (-xpad.JS_MIN))[value >= 0]
         if abs(value) <= xpad.JS_THRESH: return 0
         value = self._gamma_func(value)
         return value
 
     def _normalize_trig(self, value):
-        # value = value / xpad.TRIG_MAX
         value = (value + 1.0) / 2.0
         value = (0, value)[value > 0]
         return value
@@ -161,16 +141,6 @@ class Romeo:
         if y:
             self.trim_voltage(L_MOTOR, y)
             self.trim_voltage(R_MOTOR, y)
-
-    # def _handle_dpad_x(self, value):
-    #     if value == xpad.DPAD_UP or value == xpad.DPAD_DOWN:
-    #         self.trim_voltage(L_MOTOR, value)
-    #         self.trim_voltage(R_MOTOR, -value)
-
-    # def _handle_dpad_y(self, value):
-    #     if value == xpad.DPAD_UP or value == xpad.DPAD_DOWN:
-    #         self.trim_voltage(L_MOTOR, -value)
-    #         self.trim_voltage(R_MOTOR, -value)
 
     def _handle_a_btn(self, value):
         if value == xpad.BTN_DOWN:
@@ -265,8 +235,6 @@ class Romeo:
             try:
                 while True:
                     connection, _ = server.accept()
-                    # code, value = recv_obj(connection)
-                    # self.callbacks[code](value)
                     events = recv_obj(connection)
                     self._handle_events(events)
                     self._execute_movement()

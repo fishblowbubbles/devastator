@@ -18,7 +18,6 @@ PATH2CFG = "devastator/vision/darknet/cfg/custom_8.cfg"
 FPS = 24
 THRESH = 0.1
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", action="store_true")
@@ -26,7 +25,8 @@ if __name__ == "__main__":
     parser.add_argument("--thresh", type=float, default=THRESH)
     args = parser.parse_args()
 
-    net = darknet.load_net(PATH2CFG.encode("ascii"), PATH2WEIGHTS.encode("ascii"), 0)
+    net = darknet.load_net(PATH2CFG.encode("ascii"),
+                           PATH2WEIGHTS.encode("ascii"), 0)
     meta = darknet.load_meta(PATH2DATA.encode("ascii"))
     annotator = Annotator(path2names=PATH2NAMES)
 

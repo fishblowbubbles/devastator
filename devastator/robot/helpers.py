@@ -1,6 +1,7 @@
 import configparser
 import pickle
 
+
 def recv_obj(s):
     packets = []
     while True:

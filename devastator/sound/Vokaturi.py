@@ -19,48 +19,42 @@ class EmotionProbabilities(ctypes.Structure):
                 ("anger", ctypes.c_double), ("fear", ctypes.c_double)]
 
 
-_library = None
+_library = ctypes.CDLL("devastator/sound/vokaturi/OpenVokaturi-3-3-linux64.so")
 
+_library.VokaturiVoice_create.restype = ctypes.c_void_p
+_library.VokaturiVoice_create.argtypes = [
+    ctypes.c_double,                        # sample rate
+    ctypes.c_int                            # buffer length
+]
 
-def load(path_to_Vokaturi_library):
-    global _library
+_library.VokaturiVoice_setRelativePriorProbabilities.restype = None
+_library.VokaturiVoice_setRelativePriorProbabilities.argtypes = [
+    ctypes.c_void_p,                        # voice
+    ctypes.POINTER(EmotionProbabilities)    # prior emotion probabilities
+]
 
-    _library = ctypes.CDLL(path_to_Vokaturi_library)
+_library.VokaturiVoice_fill.restype = None
+_library.VokaturiVoice_fill.argtypes = [
+    ctypes.c_void_p,                        # voice
+    ctypes.c_int,                           # no. of samples
+    ctypes.POINTER(ctypes.c_double)         # samples
+]
 
-    _library.VokaturiVoice_create.restype = ctypes.c_void_p
-    _library.VokaturiVoice_create.argtypes = [
-        ctypes.c_double,  # sample_rate
-        ctypes.c_int
-    ]  # buffer_length
+_library.VokaturiVoice_extract.restype = None
+_library.VokaturiVoice_extract.argtypes = [
+    ctypes.c_void_p,                        # voice
+    ctypes.POINTER(Quality),                # quality
+    ctypes.POINTER(EmotionProbabilities)    # emotion probabilities
+]
 
-    _library.VokaturiVoice_setRelativePriorProbabilities.restype = None
-    _library.VokaturiVoice_setRelativePriorProbabilities.argtypes = [
-        ctypes.c_void_p,  # voice
-        ctypes.POINTER(EmotionProbabilities)
-    ]  # priorEmotionProbabilities
+_library.VokaturiVoice_reset.restype = None
+_library.VokaturiVoice_reset.argtypes = [ctypes.c_void_p]
 
-    _library.VokaturiVoice_fill.restype = None
-    _library.VokaturiVoice_fill.argtypes = [
-        ctypes.c_void_p,  # voice
-        ctypes.c_int,  # num_samples
-        ctypes.POINTER(ctypes.c_double)
-    ]  # samples
+_library.VokaturiVoice_destroy.restype = None
+_library.VokaturiVoice_destroy.argtypes = [ctypes.c_void_p]
 
-    _library.VokaturiVoice_extract.restype = None
-    _library.VokaturiVoice_extract.argtypes = [
-        ctypes.c_void_p,  # voice
-        ctypes.POINTER(Quality),  # quality
-        ctypes.POINTER(EmotionProbabilities)
-    ]  # emotionProbabilities
-
-    _library.VokaturiVoice_reset.restype = None
-    _library.VokaturiVoice_reset.argtypes = [ctypes.c_void_p]  # voice
-
-    _library.VokaturiVoice_destroy.restype = None
-    _library.VokaturiVoice_destroy.argtypes = [ctypes.c_void_p]  # voice
-
-    _library.Vokaturi_versionAndLicense.restype = ctypes.c_char_p
-    _library.Vokaturi_versionAndLicense.argtypes = []
+_library.Vokaturi_versionAndLicense.restype = ctypes.c_char_p
+_library.Vokaturi_versionAndLicense.argtypes = []
 
 
 class Voice:
@@ -87,7 +81,7 @@ class Voice:
 
 
 def versionAndLicense():
-    return _library.Vokaturi_versionAndLicense().decode("UTF-8")
+    return _library.Vokaturi_versionAndLicense().decode("utf-8")
 
 
 def SampleArrayC(size):

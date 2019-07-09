@@ -5,10 +5,8 @@ from robot import controller, realsense, respeaker, romeo
 # from sound import ?
 # from vision import ?
 
-
 HOST = "127.0.0.1"
 PORT = 7777
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
