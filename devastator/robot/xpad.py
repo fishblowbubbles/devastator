@@ -1,8 +1,9 @@
 import argparse
 import pickle
 import socket
+import time
 
-from evdev import InputDevice, categorize, ecodes, list_devices
+import pygame
 
 import romeo
 
@@ -10,37 +11,54 @@ DEVICE_NAME = "Microsoft X-Box One S pad"
 
 L_JS_X, L_JS_Y, L_TRIG = 0, 1, 2
 R_JS_X, R_JS_Y, R_TRIG = 3, 4, 5
-DPAD_X, DPAD_Y = 16, 17
-A_BTN, B_BTN = 304, 305
-X_BTN, Y_BTN = 307, 308
-L_BUMP, R_BUMP = 310, 311
-SELECT, START = 314, 315
+A_BTN, B_BTN = 0, 1
+X_BTN, Y_BTN = 2, 3
+DPAD = 0
+L_BUMP, R_BUMP = 4, 5
+SELECT, START = 6, 7
 
-JS_MIN, JS_MAX, JS_THRESH = -32768, 32767, 0.1
-TRIG_MAX = 1023
+AXIS, HAT = pygame.JOYAXISMOTION, pygame.JOYHATMOTION
+BTN_UP, BTN_DOWN = pygame.JOYBUTTONUP, pygame.JOYBUTTONDOWN
 
-BTN_UP, BTN_DOWN = 0, 1
-DPAD_UP, DPAD_DOWN = 1, -1
+POLLING_RATE = 200
+JS_THRESH = 0.1
+
+UP, DOWN = 0, 1
 
 
 class XPad:
     def __init__(self, device_name=DEVICE_NAME):
-        self.device = self._get_device(device_name)
+        pygame.init()
+        self.joystick = self._get_device(device_name)
+        self.joystick.init()
 
     def _get_device(self, device_name):
-        for path in list_devices():
-            device = InputDevice(path)
-            if device.name == device_name:
-                return device
+        for i in range(pygame.joystick.get_count()):
+            joystick = pygame.joystick.Joystick(i)
+            if joystick.get_name() == device_name:
+                return joystick
         else:
             message = "{} not found".format(device_name)
             raise Exception(message)
 
+    def _get_events(self):
+        events = {AXIS: {}, HAT: {}, BTN_UP: {}, BTN_DOWN: {}}
+        for event in pygame.event.get():
+            if event.type == AXIS:
+                events[AXIS][event.axis] = event.value
+            if event.type == HAT:
+                events[HAT][event.hat] = event.value
+            if event.type == BTN_UP:
+                events[BTN_UP][event.button] = UP
+            if event.type == BTN_DOWN:
+                events[BTN_DOWN][event.button] = DOWN
+        return events
+
     def run(self):
-        for event in self.device.read_loop():
-            if event.type in [ecodes.EV_KEY, ecodes.EV_ABS]:
-                command = (event.code, event.value)
-                romeo.send_command(command)
+        while True:
+            events = self._get_events()
+            romeo.send_command(events)
+            time.sleep(1 / POLLING_RATE)
 
 
 if __name__ == "__main__":

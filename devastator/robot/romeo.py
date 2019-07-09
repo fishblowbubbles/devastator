@@ -11,9 +11,9 @@ from helpers import ConfigFile, recv_obj
 
 CONFIG = ConfigFile("config.ini")
 
-HOST = "localhost"
+# HOST = "localhost"
 # HOST = "192.168.1.178"  # UP-Squared 1
-# HOST = "192.168.1.232"  # UP-Squared 2
+HOST = "192.168.1.232"  # UP-Squared 2
 PORT = 8888
 
 DEVICE_ID = "usb-Arduino_LLC_Arduino_Leonardo-if00"
@@ -43,6 +43,7 @@ class Romeo:
         self.host, self.port = HOST, PORT
 
         self.gamma = float(config.get("romeo", "gamma"))
+        self.min_voltage = float(config.get("romeo", "minvoltage"))
         self.max_voltage = float(config.get("romeo", "maxvoltage"))
         self.set_overshoot(int(config.get("romeo", "overshoot")))
         self.set_voltage(L_MOTOR, float(config.get("romeo", "leftvoltage")))
@@ -61,23 +62,53 @@ class Romeo:
             xpad.R_TRIG: 0
         }
         self.callbacks = {
-            xpad.L_JS_Y: self._handle_left_joystick_y,   # forward-reverse
-            xpad.L_TRIG: self._handle_left_trigger,      # left motor
-            xpad.R_JS_X: self._handle_right_joystick_x,  # turning
-            xpad.R_TRIG: self._handle_right_trigger,     # right motor
-            xpad.DPAD_X: self._handle_dpad_x,            # asymmetrical voltage trimming
-            xpad.DPAD_Y: self._handle_dpad_y,            # symmetrical voltage trimming
-            xpad.A_BTN : self._handle_a_btn,             # toggle direction
-            xpad.B_BTN : self._handle_b_btn,             # toggle control mode
-            xpad.L_BUMP: self._handle_unmapped,
-            xpad.R_BUMP: self._handle_unmapped,
-            xpad.L_JS_X: self._handle_unmapped,
-            xpad.R_JS_Y: self._handle_unmapped,
-            xpad.X_BTN : self._handle_unmapped,
-            xpad.Y_BTN : self._handle_unmapped,
-            xpad.SELECT: self._handle_unmapped,
-            xpad.START : self._handle_unmapped,
+            xpad.AXIS: {
+                xpad.L_JS_Y: self._handle_left_joystick_y,
+                xpad.L_TRIG: self._handle_left_trigger,
+                xpad.R_JS_X: self._handle_right_joystick_x,
+                xpad.R_TRIG: self._handle_right_trigger,
+                xpad.L_JS_X: self._handle_unmapped,
+                xpad.R_JS_Y: self._handle_unmapped
+            },
+            xpad.HAT: {
+                xpad.DPAD: self._handle_dpad,
+            },
+            xpad.BTN_UP: {
+                xpad.A_BTN : self._handle_unmapped,
+                xpad.B_BTN : self._handle_unmapped,
+                xpad.X_BTN : self._handle_unmapped,
+                xpad.Y_BTN : self._handle_unmapped,
+                xpad.L_BUMP: self._handle_unmapped,
+                xpad.R_BUMP: self._handle_unmapped,
+            },
+            xpad.BTN_DOWN: {
+                xpad.A_BTN : self._handle_a_btn,
+                xpad.B_BTN : self._handle_b_btn,
+                xpad.X_BTN : self._handle_unmapped,
+                xpad.Y_BTN : self._handle_unmapped,
+                xpad.L_BUMP: self._handle_unmapped,
+                xpad.R_BUMP: self._handle_unmapped,
+            }
         }
+
+        #                                               self.callbacks = {
+        #     xpad.L_JS_Y: self._handle_left_joystick_y,   # throttle
+        #     xpad.L_TRIG: self._handle_left_trigger,      # left motor
+        #     xpad.R_JS_X: self._handle_right_joystick_x,  # steering
+        #     xpad.R_TRIG: self._handle_right_trigger,     # right motor
+        #     xpad.DPAD_X: self._handle_dpad_x,            # asymmetrical voltage trimming
+        #     xpad.DPAD_Y: self._handle_dpad_y,            # symmetrical voltage trimming
+        #     xpad.A_BTN : self._handle_a_btn,             # toggle direction
+        #     xpad.B_BTN : self._handle_b_btn,             # toggle control mode
+        #     xpad.L_BUMP: self._handle_unmapped,
+        #     xpad.R_BUMP: self._handle_unmapped,
+        #     xpad.L_JS_X: self._handle_unmapped,
+        #     xpad.R_JS_Y: self._handle_unmapped,
+        #     xpad.X_BTN : self._handle_unmapped,
+        #     xpad.Y_BTN : self._handle_unmapped,
+        #     xpad.SELECT: self._handle_unmapped,
+        #     xpad.START : self._handle_unmapped,
+        # }
 
     """ MATH HELPERS """
 
@@ -88,16 +119,23 @@ class Romeo:
         return value
 
     def _normalize_js(self, value):
-        value = (value / xpad.JS_MAX, value / (-xpad.JS_MIN))[value >= 0]
+        # value = (value / xpad.JS_MAX, value / (-xpad.JS_MIN))[value >= 0]
         if abs(value) <= xpad.JS_THRESH: return 0
         value = self._gamma_func(value)
         return value
 
     def _normalize_trig(self, value):
-        value = value / xpad.TRIG_MAX
+        # value = value / xpad.TRIG_MAX
+        value = (value + 1.0) / 2.0
+        value = (0, value)[value > 0]
         return value
 
     """ INPUT CALLBACKS """
+
+    def _handle_events(self, events):
+        for key, inputs in events.items():
+            for event, value in inputs.items():
+                self.callbacks[key][event](value)
 
     def _handle_left_joystick_y(self, value):
         value = self._normalize_js(-value)
@@ -115,15 +153,24 @@ class Romeo:
         value = self._normalize_trig(value)
         self.states[xpad.R_TRIG] = value
 
-    def _handle_dpad_x(self, value):
-        if value == xpad.DPAD_UP or value == xpad.DPAD_DOWN:
-            self.trim_voltage(L_MOTOR, value)
-            self.trim_voltage(R_MOTOR, -value)
+    def _handle_dpad(self, value):
+        x, y = value
+        if x:
+            self.trim_voltage(L_MOTOR, x)
+            self.trim_voltage(R_MOTOR, -x)
+        if y:
+            self.trim_voltage(L_MOTOR, y)
+            self.trim_voltage(R_MOTOR, y)
 
-    def _handle_dpad_y(self, value):
-        if value == xpad.DPAD_UP or value == xpad.DPAD_DOWN:
-            self.trim_voltage(L_MOTOR, -value)
-            self.trim_voltage(R_MOTOR, -value)
+    # def _handle_dpad_x(self, value):
+    #     if value == xpad.DPAD_UP or value == xpad.DPAD_DOWN:
+    #         self.trim_voltage(L_MOTOR, value)
+    #         self.trim_voltage(R_MOTOR, -value)
+
+    # def _handle_dpad_y(self, value):
+    #     if value == xpad.DPAD_UP or value == xpad.DPAD_DOWN:
+    #         self.trim_voltage(L_MOTOR, -value)
+    #         self.trim_voltage(R_MOTOR, -value)
 
     def _handle_a_btn(self, value):
         if value == xpad.BTN_DOWN:
@@ -198,7 +245,6 @@ class Romeo:
         return voltage
 
     def set_voltage(self, motor, voltage):
-        voltage = round((voltage, self.max_voltage)[voltage > self.max_voltage], 2)
         self.config.save("romeo", "{}voltage".format(("left", "right")[motor - 1]), voltage)
         print("{} Motor Voltage   = {}".format(("L", "R")[motor - 1], voltage))
         message = "motor{}_voltage {}".format(motor, voltage)
@@ -206,7 +252,9 @@ class Romeo:
 
     def trim_voltage(self, motor, direction, voltage_delta=0.05):
         voltage = self.get_voltage(motor) + direction * voltage_delta
-        self.set_voltage(motor, voltage)
+        voltage = (self.min_voltage, voltage)[voltage > self.min_voltage]
+        voltage = (voltage, self.max_voltage)[voltage > self.max_voltage]
+        self.set_voltage(motor, round(voltage, 2))
 
     """ MAIN LOOP """
 
@@ -217,8 +265,10 @@ class Romeo:
             try:
                 while True:
                     connection, _ = server.accept()
-                    code, value = recv_obj(connection)
-                    self.callbacks[code](value)
+                    # code, value = recv_obj(connection)
+                    # self.callbacks[code](value)
+                    events = recv_obj(connection)
+                    self._handle_events(events)
                     self._execute_movement()
             finally:
                 self.stop_motors()
