@@ -1,5 +1,0 @@
-classes=6
-train=data/train.txt
-valid=data/validation.txt
-names=darknet/data/custom_6.names
-backup=backup
