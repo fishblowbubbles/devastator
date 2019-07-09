@@ -1,7 +1,7 @@
-evdev==1.2.0
 numpy==1.16.4
 opencv-python==4.1.0.25
 PyAudio==0.2.11
+pygame==1.9.6
 pyrealsense2==2.24.0.950
 pyserial==3.4
 scipy==1.3.0
