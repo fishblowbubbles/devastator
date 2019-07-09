@@ -60,11 +60,6 @@ class D435i:
 
     def _process_requests(self, frames):
         while not self.requests.empty():
-<<<<<<< HEAD
-            conn = self.requests.get()
-            rgbd = self._frames_to_rgbd(frames)
-            self._send_and_shutdown(conn, rgbd)
-=======
             connection = self.requests.get()
             rgbd = self._frames_to_rgbd(frames)
             self._send_frames(connection, rgbd)
@@ -76,7 +71,6 @@ class D435i:
             while True:
                 connection, _ = server.accept()
                 self.requests.put(connection)
->>>>>>> develop
 
     def run(self):
         server = Process(target=self._start_server)
