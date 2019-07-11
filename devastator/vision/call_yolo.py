@@ -153,7 +153,7 @@ def load_model(device, labels, model_xml, model_bin, plugin_dir, cpu_extension =
     assert len(net.outputs) == 3, "Sample supports only YOLO V3 based triple output topologies"
 
     # ---------------------------------------------- 4. Preparing inputs -----------------------------------------------
-    
+
     #  Defaulf batch_size is 1
     net.batch_size = 1
 
@@ -167,7 +167,7 @@ def corners2center(xmin,xmax,ymin,ymax):
     h = ymax - ymin
     w = xmax - xmin
     return x, y, w, h
-    
+
 def recv_object(client):
     packets = []
     while True:
@@ -251,7 +251,7 @@ def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_give
 
 def get_frame(input_stream, HOST=None, PORT=None):
     if input_stream == "cam":
-        input_stream = 0 
+        input_stream = 0
         cap = cv2.VideoCapture(input_stream)
         ret, frame = cap.read()
     elif input_stream == "server":
@@ -281,15 +281,15 @@ def main():
     # ------------------------------------------- Loading model to the plugin -----------------------------------------
     net, exec_net = load_model(device, labels, model_xml, model_bin, plugin_dir = None, cpu_extension = cpu_extension)
     print("Model loaded")
-    
+
     #mapping labels
     with open(labels, 'r') as f:
         labels_map = [x.strip() for x in f]
 
     frame = get_frame(args.input, HOST, PORT)
-  
+
     detect(frame, net, exec_net, labels_map, args.prob_threshold,  args.iou_threshold, depth_given = True)
-    
+
 
 
 if __name__ == '__main__':

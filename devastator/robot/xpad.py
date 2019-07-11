@@ -1,11 +1,14 @@
 import argparse
+import os
 import pickle
 import socket
 import time
 
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+
 import pygame
 
-import romeo
+from robot.romeo import send_command
 
 DEVICE_NAME = "Microsoft X-Box One S pad"
 
@@ -29,6 +32,7 @@ UP, DOWN = 0, 1
 class XPad:
     def __init__(self, device_name=DEVICE_NAME):
         pygame.init()
+        self.device_name=device_name
         self.joystick = self._get_device(device_name)
         self.joystick.init()
 
@@ -55,7 +59,7 @@ class XPad:
     def run(self):
         while True:
             events = self._get_events()
-            romeo.send_command(events)
+            send_command(events)
             time.sleep(1 / POLLING_RATE)
 
 

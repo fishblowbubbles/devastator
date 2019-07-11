@@ -6,17 +6,10 @@ from multiprocessing import Process, Queue
 import numpy as np
 import pyrealsense2 as rs
 
-from helpers import recv_obj
+from robot.helpers import recv_obj, send_data
 
 HOST = "127.0.0.1"
 PORT = 4444
-
-
-def get_frames(host=HOST, port=PORT):
-    with socket.socket() as client:
-        client.connect((HOST, PORT))
-        rgbd = recv_obj(client)
-    return rgbd
 
 
 class D435i:
@@ -33,20 +26,11 @@ class D435i:
         rgbd = np.concatenate((rgb, d), axis=2)
         return rgbd
 
-    def _send_frames(self, connection, rgbd):
-        try:
-            connection.sendall(pickle.dumps(rgbd))
-            connection.shutdown(socket.SHUT_RDWR)
-        except ConnectionResetError:
-            print("A connection was reset ...")
-        except BrokenPipeError:
-            print("A pipe broke ...")
-
     def _process_requests(self, frames):
+        rgbd = self._frames_to_rgbd(frames)
         while not self.requests.empty():
             connection = self.requests.get()
-            rgbd = self._frames_to_rgbd(frames)
-            self._send_frames(connection, rgbd)
+            send_data(connection, rgbd)
 
     def _start_server(self):
         with socket.socket() as server:
@@ -62,7 +46,10 @@ class D435i:
         try:
             while True:
                 frames = self.pipeline.wait_for_frames()
-                self._process_requests(frames)
+                if self.requests.empty():
+                    continue
+                else:
+                    self._process_requests(frames)
         finally:
             self.pipeline.stop()
             server.terminate()

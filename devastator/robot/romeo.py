@@ -6,8 +6,8 @@ import sys
 
 import serial
 
-import xpad as xpad
-from helpers import ConfigFile, recv_obj
+from robot import xpad
+from robot.helpers import ConfigFile, recv_obj
 
 CONFIG = ConfigFile("config.ini")
 
@@ -25,22 +25,12 @@ L_POLARITY, R_POLARITY = -1, 1
 CONTROL_MODES = ["Joystick", "Trigger"]
 
 
-def send_command(command, host=HOST, port=PORT):
-    with socket.socket() as client:
-        try:
-            client.connect((HOST, PORT))
-            client.sendall(pickle.dumps(command))
-            client.shutdown(socket.SHUT_RDWR)
-        except ConnectionRefusedError:
-            print("The connection was refused ...")
-
-
 class Romeo:
-    def __init__(self, config=CONFIG, host=HOST, port=PORT):
-        device_path = "/dev/serial/by-id/{}".format(DEVICE_ID)
+    def __init__(self, device_id=DEVICE_ID, config=CONFIG, host=HOST, port=PORT):
+        device_path = "/dev/serial/by-id/{}".format(device_id)
         self.serial = serial.Serial(device_path, config.get("romeo", "baudrate"))
         self.device_path, self.config = device_path, config
-        self.host, self.port = HOST, PORT
+        self.host, self.port = host, port
 
         self.gamma = float(config.get("romeo", "gamma"))
         self.min_voltage = float(config.get("romeo", "minvoltage"))
@@ -88,14 +78,6 @@ class Romeo:
 
     """ INPUT CALLBACKS """
 
-    def _handle_events(self, events):
-        for key, inputs in events.items():
-            for event, value in inputs.items():
-                try:
-                    self.callbacks[key][event](value)
-                except KeyError:
-                    continue
-
     def _handle_left_joystick_y(self, value):
         value = self._normalize_js(-value)
         self.states[xpad.L_JS_Y] = value
@@ -131,6 +113,14 @@ class Romeo:
         if value == xpad.BTN_DOWN:
             self.control_mode = next(self.change_control_mode)
             print("Control Mode      = {}".format(self.control_mode))
+
+    def _handle_events(self, events):
+        for key, inputs in events.items():
+            for event, value in inputs.items():
+                try:
+                    self.callbacks[key][event](value)
+                except KeyError:
+                    continue
 
     """ MOVEMENT CONTROLS """
 
@@ -216,6 +206,16 @@ class Romeo:
                     self._execute_movement()
             finally:
                 self.stop_motors()
+
+
+def send_command(command, host=HOST, port=PORT):
+    with socket.socket() as client:
+        try:
+            client.connect((host, port))
+            client.sendall(pickle.dumps(command))
+            client.shutdown(socket.SHUT_RDWR)
+        except ConnectionRefusedError:
+            print("The connection was refused ...")
 
 
 if __name__ == "__main__":
