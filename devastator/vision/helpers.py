@@ -10,26 +10,16 @@ INPUT_MAP = [[200, 10], [1080, 10], [1270, 710], [10, 710]]
 OUTPUT_MAP = [[0, 0], [1280, 0], [1280, 720], [0, 720]]
 RESOLUTION = (1280, 720)
 COLORS = [
-    [31, 119, 180, 255],
-    [174, 199, 232, 255],
-    [255, 127, 14, 255],
-    [255, 187, 120, 255],
-    [44, 160, 44, 255],
-    [152, 223, 138, 255],
-    [214, 39, 40, 255],
-    [255, 152, 150, 255],
-    [148, 103, 189, 255],
-    [197, 176, 213, 255],
-    [140, 86, 75, 255],
-    [196, 156, 148, 255],
-    [227, 119, 194, 255],
-    [247, 182, 210, 255],
-    [127, 127, 127, 255],
-    [199, 199, 199, 255],
-    [188, 189, 34, 255],
-    [219, 219, 141, 255],
-    [23, 190, 207, 255],
-    [158, 218, 229, 255],
+    [31, 119, 180, 255], [174, 199, 232, 255],
+    [255, 127, 14, 255], [255, 187, 120, 255],
+    [44, 160, 44, 255], [152, 223, 138, 255],
+    [214, 39, 40, 255], [255, 152, 150, 255],
+    [148, 103, 189, 255], [197, 176, 213, 255],
+    [140, 86, 75, 255], [196, 156, 148, 255],
+    [227, 119, 194, 255], [247, 182, 210, 255],
+    [127, 127, 127, 255], [199, 199, 199, 255],
+    [188, 189, 34, 255], [219, 219, 141, 255],
+    [23, 190, 207, 255], [158, 218, 229, 255]
 ]
 
 
@@ -51,29 +41,43 @@ def fix_perspective(img, src=INPUT_MAP, dst=OUTPUT_MAP, resolution=RESOLUTION):
 
 
 def split_rgbd(rgbd):
-    rgb, d = rgbd[:, :, :3].astype(np.uint8), rgbd[:, :, 3]
+    rgb, depth = rgbd[:, :, :3].astype(np.uint8), rgbd[:, :, 3]
     rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
-    return rgb, d
+    return rgb, depth
 
 
-def predict(net, meta, annotator, thresh=0.05, show=True):
-    rgbd = realsense.get_frames()
-    rgb, d = split_rgbd(rgbd)
+class Detection:
+    def __init__(self, label, confidence, coords, distance):
+        self.label = label
+        self.confidence = confidence
+        self.coords = coords
+        self.distance = distance
+
+
+def darknet_detect(net, meta, rgbd, annotator, thresh=0.05, show=True):
+    rgb, depth = split_rgbd(rgbd)
     cv2.imwrite(".tmp/frame.jpg", rgb)
-    preds = darknet.detect(net, meta, ".tmp/frame.jpg".encode("ascii"), thresh=thresh)
+    detections = darknet.detect(net, meta, ".tmp/frame.jpg".encode("ascii"), thresh=thresh)
+    detections_with_distances = add_distances(detections, depth)
     if show:
-        annotator.add_patches(preds, rgb, d)
+        annotator.add_patches(detections_with_distances, rgb, depth)
         cv2.imshow("darknet", rgb)
-    return preds
+    return detections
 
 
-def livestream(net, meta, annotator, thresh=0.05, fps=24):
-    delay = int(100 / fps)
-    while True:
-        predict(net, meta, annotator)
-        if cv2.waitKey(delay) == ord("q"):
-            break
-    cv2.destroyAllWindows()
+def get_distance(x, y, depth):
+    distance = round(depth[int(y), int(x)] / 1000, 2)
+    return distance
+
+
+def add_distances(detections, depth):
+    detections_with_distances = []
+    for label, confidence, coords in detections:
+        x, y, _, _ = coords
+        distance = get_distance(x, y, depth)
+        detection = Detection(label.decode("utf-8"), confidence, coords, distance)
+        detections_with_distances.append(detection)
+    return detections_with_distances
 
 
 class Annotator:
@@ -86,16 +90,16 @@ class Annotator:
         for point in input_map:
             cv2.circle(img, tuple(point), 5, (0, 0, 255), -1)
 
-    def add_patches(self, preds, rgb, d):
-        for label, confidence, coords in preds:
-            x, y, width, height = coords
+    def add_patches(self, detections_with_distances, rgb, depth):
+        for detection in detections_with_distances:
+            x, y, width, height = detection.coords
             x1, y1, = int(x - width / 2), int(y - height / 2)
             x2, y2 = int(x + width / 2), int(y + height / 2)
 
-            label = label.decode("utf-8")
-            distance = round(d[int(y), int(x)] / 1000, 2)
-            color = self.colors[self.names.index(label)][:3]
-            s = "{} (Conf.: {}, Dist.: {} m)".format(label, round(confidence, 2), distance)
+            color = self.colors[self.names.index(detection.label)][:3]
+            s = "{} (Conf.: {}, Dist.: {} m)".format(detection.label,
+                                                     round(detection.confidence, 2),
+                                                     detection.distance)
 
             cv2.putText(rgb, s, (x1 + 5, y1 - 5), self.font, 0.5, color, 1)
             cv2.rectangle(rgb, (x1, y1), (x2, y2), color, 2)

@@ -8,7 +8,8 @@ import numpy as np
 
 import devastator.robot.realsense as realsense
 import devastator.vision.darknet as darknet
-from devastator.vision.helpers import Annotator, predict, livestream
+from devastator.helpers import darknet_livestream
+from devastator.vision.helpers import Annotator, darknet_detect
 
 PATH2WEIGHTS = "devastator/vision/darknet/backup/custom_8.weights"
 PATH2NAMES = "devastator/vision/darknet/data/custom_8.names"
@@ -31,7 +32,8 @@ if __name__ == "__main__":
     annotator = Annotator(path2names=PATH2NAMES)
 
     if args.video:
-        livestream(net, meta, annotator, thresh=args.thresh, fps=args.fps)
+        darknet_livestream(net, meta, annotator, thresh=args.thresh, fps=args.fps)
     else:
-        predict(net, meta, annotator, thresh=args.thresh)
+        rgbd = realsense.get_frames()
+        darknet_detect(net, meta, rgbd, annotator, thresh=args.thresh)
         cv2.waitKey(0)
