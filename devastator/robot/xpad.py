@@ -42,14 +42,12 @@ class XPad:
             raise Exception(message)
 
     def _get_events(self):
-        events = {AXIS: {}, HAT: {}, BTN_UP: {}, BTN_DOWN: {}}
+        events = {AXIS: {}, HAT: {}, BTN_DOWN: {}}
         for event in pygame.event.get():
             if event.type == AXIS:
                 events[AXIS][event.axis] = event.value
             elif event.type == HAT:
                 events[HAT][event.hat] = event.value
-            elif event.type == BTN_UP:
-                events[BTN_UP][event.button] = UP
             elif event.type == BTN_DOWN:
                 events[BTN_DOWN][event.button] = DOWN
         return events

@@ -55,28 +55,18 @@ class Romeo:
         self.direction = next(self.change_direction)
         self.control_mode = next(self.change_control_mode)
 
-        self.states = {
-            xpad.L_JS_Y: 0,
-            xpad.L_TRIG: 0,
-            xpad.R_JS_X: 0,
-            xpad.R_TRIG: 0
-        }
+        self.states = {xpad.L_JS_Y: 0,
+                       xpad.L_TRIG: 0,
+                       xpad.R_JS_X: 0,
+                       xpad.R_TRIG: 0}
 
-        self.callbacks = {
-            xpad.AXIS: {
-                xpad.L_JS_Y: self._handle_left_joystick_y,
-                xpad.L_TRIG: self._handle_left_trigger,
-                xpad.R_JS_X: self._handle_right_joystick_x,
-                xpad.R_TRIG: self._handle_right_trigger
-            },
-            xpad.HAT: {
-                xpad.DPAD: self._handle_dpad
-            },
-            xpad.BTN_DOWN: {
-                xpad.A_BTN : self._handle_a_btn,
-                xpad.B_BTN : self._handle_b_btn
-            }
-        }
+        self.callbacks = {xpad.AXIS: {xpad.L_JS_Y: self._handle_left_joystick_y,
+                                      xpad.L_TRIG: self._handle_left_trigger,
+                                      xpad.R_JS_X: self._handle_right_joystick_x,
+                                      xpad.R_TRIG: self._handle_right_trigger},
+                          xpad.HAT: {xpad.DPAD: self._handle_dpad},
+                          xpad.BTN_DOWN: {xpad.A_BTN : self._handle_a_btn,
+                                          xpad.B_BTN : self._handle_b_btn}}
 
     """ MATH HELPERS """
 
