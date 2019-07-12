@@ -9,7 +9,7 @@ import serial
 from robot import xpad
 from robot.helpers import ConfigFile, recv_obj
 
-CONFIG = ConfigFile("robot/config.ini")
+CONFIG = ConfigFile("devastator/robot/config.ini")
 
 HOST = "localhost"
 # HOST = "192.168.1.178"  # UP-Squared 1
@@ -45,7 +45,7 @@ class Romeo:
         self.direction = next(self.change_direction)
         self.control_mode = next(self.change_control_mode)
 
-        self.states = {xpad.L_JS_Y: 0,
+        self.state = {xpad.L_JS_Y: 0,
                        xpad.L_TRIG: 0,
                        xpad.R_JS_X: 0,
                        xpad.R_TRIG: 0}
@@ -80,19 +80,19 @@ class Romeo:
 
     def _handle_left_joystick_y(self, value):
         value = self._normalize_js(-value)
-        self.states[xpad.L_JS_Y] = value
+        self.state[xpad.L_JS_Y] = value
 
     def _handle_left_trigger(self, value):
         value = self._normalize_trig(value)
-        self.states[xpad.L_TRIG] = value
+        self.state[xpad.L_TRIG] = value
 
     def _handle_right_joystick_x(self, value):
         value = self._normalize_js(-value)
-        self.states[xpad.R_JS_X] = value
+        self.state[xpad.R_JS_X] = value
 
     def _handle_right_trigger(self, value):
         value = self._normalize_trig(value)
-        self.states[xpad.R_TRIG] = value
+        self.state[xpad.R_TRIG] = value
 
     def _handle_dpad(self, value):
         x, y = value
@@ -125,15 +125,15 @@ class Romeo:
     """ MOVEMENT CONTROLS """
 
     def _js_movement(self):
-        forward_speed = self.states[xpad.L_JS_Y]
-        turn_speed = self.states[xpad.R_JS_X]
+        forward_speed = self.state[xpad.L_JS_Y]
+        turn_speed = self.state[xpad.R_JS_X]
         l_motor_speed = forward_speed - turn_speed
         r_motor_speed = forward_speed + turn_speed
         self.set_motors(l_motor_speed, r_motor_speed)
 
     def _trig_movement(self):
-        l_motor_speed = self.states[xpad.L_TRIG] * self.direction
-        r_motor_speed = self.states[xpad.R_TRIG] * self.direction
+        l_motor_speed = self.state[xpad.L_TRIG] * self.direction
+        r_motor_speed = self.state[xpad.R_TRIG] * self.direction
         self.set_motors(l_motor_speed, r_motor_speed)
 
     def _execute_movement(self):

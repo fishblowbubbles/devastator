@@ -1,16 +1,16 @@
 import argparse
 import sys
 
-sys.path.append(".")
+sys.path.append("./devastator")
 
 import cv2
 import numpy as np
 
-import devastator.robot.realsense as realsense
-import devastator.vision.darknet as darknet
-from devastator.helpers import darknet_livestream
-from devastator.robot.helpers import get_data
-from devastator.vision.helpers import Annotator, darknet_detect
+import robot.realsense as realsense
+import vision.darknet as darknet
+from helpers import darknet_livestream
+from robot.helpers import get_data
+from vision.helpers import Annotator, darknet_detect
 
 PATH2WEIGHTS = "devastator/vision/darknet/backup/custom_8.weights"
 PATH2NAMES = "devastator/vision/darknet/data/custom_8.names"
@@ -35,6 +35,6 @@ if __name__ == "__main__":
     if args.video:
         darknet_livestream(net, meta, annotator, thresh=args.thresh, fps=args.fps)
     else:
-        rgbd = get_frames(realsense.HOST, realsense.PORT)
+        rgbd = get_data(realsense.HOST, realsense.PORT)
         darknet_detect(net, meta, rgbd, annotator, thresh=args.thresh)
         cv2.waitKey(0)

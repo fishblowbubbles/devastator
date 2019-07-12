@@ -9,7 +9,6 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
 
 from robot.helpers import connect_and_send
-from robot import romeo
 
 DEVICE_NAME = "Microsoft X-Box One S pad"
 
@@ -31,9 +30,10 @@ UP, DOWN = 0, 1
 
 
 class XPad:
-    def __init__(self, device_name=DEVICE_NAME):
+    def __init__(self, target_host, target_port, device_name=DEVICE_NAME):
         pygame.init()
         self.device_name = device_name
+        self.target_host, self.target_port = target_host, target_port
         self.joystick = self._get_device()
         self.joystick.init()
 
@@ -46,28 +46,25 @@ class XPad:
             message = "{} not found".format(self.device_name)
             raise Exception(message)
 
-    def _get_events(self):
-        events = {AXIS: {}, HAT: {}, BTN_DOWN: {}}
-        for event in pygame.event.get():
+    def _process_inputs(self, events):
+        inputs = {AXIS: {}, HAT: {}, BTN_DOWN: {}}
+        for event in events:
             if event.type == AXIS:
-                events[AXIS][event.axis] = event.value
+                inputs[AXIS][event.axis] = event.value
             elif event.type == HAT:
-                events[HAT][event.hat] = event.value
+                inputs[HAT][event.hat] = event.value
             elif event.type == BTN_DOWN:
-                events[BTN_DOWN][event.button] = DOWN
-        return events
+                inputs[BTN_DOWN][event.button] = DOWN
+        return inputs
+
+    def _get_inputs(self):
+        events = pygame.event.get()
+        if not events: return None
+        inputs = self._process_inputs(events)
+        return inputs
 
     def run(self):
         while True:
-            events = self._get_events()
-            connect_and_send(events, romeo.HOST, romeo.PORT)
+            inputs = self._get_inputs()
+            if inputs: connect_and_send(inputs, self.target_host, self.target_port)
             time.sleep(1 / POLLING_RATE)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--device-name", default=DEVICE_NAME)
-    args = parser.parse_args()
-
-    xpad = XPad(device_name=args.device_name)
-    xpad.run()

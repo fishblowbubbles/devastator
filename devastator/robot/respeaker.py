@@ -17,11 +17,11 @@ DEVICE_NAME = "ReSpeaker 4 Mic Array (UAC1.0)"
 
 WIDTH = 2
 CHUNK_SIZE = 1024
-SECONDS = 5
+BUFFER_SIZE_IN_SECONDS = 5
 
 
 class ReSpeaker:
-    def __init__(self, width=WIDTH, chunk_size=CHUNK_SIZE, seconds=SECONDS,
+    def __init__(self, width=WIDTH, chunk_size=CHUNK_SIZE, seconds=BUFFER_SIZE_IN_SECONDS,
                  device_name=DEVICE_NAME, host=HOST, port=PORT):
         self.host, self.port = host, port
 
@@ -93,12 +93,3 @@ class ReSpeaker:
             self.stream.close()
             self.audio.terminate()
             server.terminate()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--seconds", type=int, default=SECONDS)
-    args = parser.parse_args()
-
-    respeaker = ReSpeaker(seconds=args.seconds)
-    respeaker.run()

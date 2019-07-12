@@ -19,7 +19,7 @@ class EmotionProbabilities(ctypes.Structure):
                 ("anger", ctypes.c_double), ("fear", ctypes.c_double)]
 
 
-_library = ctypes.CDLL("sound/vokaturi/OpenVokaturi-3-3-linux64.so")
+_library = ctypes.CDLL("devastator/sound/vokaturi/OpenVokaturi-3-3-linux64.so")
 
 _library.VokaturiVoice_create.restype = ctypes.c_void_p
 _library.VokaturiVoice_create.argtypes = [
