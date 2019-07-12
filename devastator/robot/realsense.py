@@ -26,34 +26,6 @@ class D435i:
         rgbd = np.concatenate((rgb, d), axis=2)
         return rgbd
 
-<<<<<<< HEAD
-    def _send_frames(self, connection, rgbd):
-        try:
-            connection.sendall(pickle.dumps(rgbd))
-            connection.shutdown(socket.SHUT_RDWR)
-        except ConnectionResetError:
-            print("A connection was reset ...")
-        except BrokenPipeError:
-            print("A pipe broke ...")
-
-    def _frames_to_rgbd(self, frames):
-        rgb, d = frames.get_color_frame(), frames.get_depth_frame()
-        rgb, d = np.array(rgb.get_data()), np.array(d.get_data())
-        d = d.reshape((720, 1280, 1))
-        rgbd = np.concatenate((rgb, d), axis=2)
-        return rgbd
-
-    def _send_and_shutdown(self, conn, rgbd):
-        try:
-            conn.sendall(pickle.dumps(rgbd))
-            conn.shutdown(socket.SHUT_RDWR)
-        except ConnectionResetError:
-            print("A connection was reset  ...")
-        except BrokenPipeError:
-            print("A pipe broke            ...")
-
-=======
->>>>>>> e0b4ada... respeaker integration
     def _process_requests(self, frames):
         rgbd = self._frames_to_rgbd(frames)
         while not self.requests.empty():
@@ -89,9 +61,5 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=PORT)
     args = parser.parse_args()
 
-<<<<<<< HEAD
-    d435i = D435i(host=args.host, port=int(args.port))
-=======
     d435i = D435i(host=args.host, port=args.port)
->>>>>>> develop
     d435i.run()

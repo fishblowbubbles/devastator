@@ -206,23 +206,3 @@ class Romeo:
                     self._execute_movement()
             finally:
                 self.stop_motors()
-
-
-def send_command(command, host=HOST, port=PORT):
-    with socket.socket() as client:
-        try:
-            client.connect((host, port))
-            client.sendall(pickle.dumps(command))
-            client.shutdown(socket.SHUT_RDWR)
-        except ConnectionRefusedError:
-            print("The connection was refused ...")
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--host", default=HOST)
-    parser.add_argument("--port", type=int, default=PORT)
-    args = parser.parse_args()
-
-    romeo = Romeo(host=args.host, port=args.port)
-    romeo.run()

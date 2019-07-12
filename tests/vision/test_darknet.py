@@ -27,8 +27,7 @@ if __name__ == "__main__":
     parser.add_argument("--thresh", type=float, default=THRESH)
     args = parser.parse_args()
 
-    net = darknet.load_net(PATH2CFG.encode("ascii"),
-                           PATH2WEIGHTS.encode("ascii"), 0)
+    net = darknet.load_net(PATH2CFG.encode("ascii"), PATH2WEIGHTS.encode("ascii"), 0)
     meta = darknet.load_meta(PATH2DATA.encode("ascii"))
     annotator = Annotator(path2names=PATH2NAMES)
 
