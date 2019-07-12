@@ -8,7 +8,8 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
 import pygame
 
-from robot.romeo import send_command
+from robot.helpers import connect_and_send
+from robot import romeo
 
 DEVICE_NAME = "Microsoft X-Box One S pad"
 
@@ -32,17 +33,17 @@ UP, DOWN = 0, 1
 class XPad:
     def __init__(self, device_name=DEVICE_NAME):
         pygame.init()
-        self.device_name=device_name
-        self.joystick = self._get_device(device_name)
+        self.device_name = device_name
+        self.joystick = self._get_device()
         self.joystick.init()
 
-    def _get_device(self, device_name):
+    def _get_device(self):
         for i in range(pygame.joystick.get_count()):
             joystick = pygame.joystick.Joystick(i)
-            if joystick.get_name() == device_name:
+            if joystick.get_name() == self.device_name:
                 return joystick
         else:
-            message = "{} not found".format(device_name)
+            message = "{} not found".format(self.device_name)
             raise Exception(message)
 
     def _get_events(self):
@@ -59,7 +60,7 @@ class XPad:
     def run(self):
         while True:
             events = self._get_events()
-            send_command(events)
+            connect_and_send(events, romeo.HOST, romeo.PORT)
             time.sleep(1 / POLLING_RATE)
 
 

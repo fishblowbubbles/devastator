@@ -16,7 +16,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.robot:
-        devices = {"realsense": D435i(),
+        devices = { # "realsense": D435i(),
                    "respeaker": ReSpeaker(),
                    "romeo": Romeo()}
     elif args.app:
@@ -27,8 +27,7 @@ if __name__ == "__main__":
     processes = {}
     for name, device in devices.items():
         processes[name] = Process(target=device.run)
-    for name, device in processes:
+    for name, device in processes.items():
+        print("Starting {} ... ".format(name), end="")
         device.start()
-
-    # while True:
-    #     frames = get_frames()
+        print("ready")
