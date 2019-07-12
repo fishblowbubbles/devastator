@@ -5,4 +5,5 @@ venv
 devastator/__pycache__
 devastator/robot/__pycache__
 devastator/sound/__pycache__
+devastator/sound/vokaturi/__pycache__
 devastator/vision/__pycache__

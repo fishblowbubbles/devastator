@@ -4,7 +4,7 @@ import socket
 import cv2
 import numpy as np
 
-import vision.darknet
+import vision.darknet as darknet
 
 INPUT_MAP = [[200, 10], [1080, 10], [1270, 710], [10, 710]]
 OUTPUT_MAP = [[0, 0], [1280, 0], [1280, 720], [0, 720]]
@@ -52,14 +52,17 @@ class Detection:
         self.distance = distance
 
 
-def darknet_detect(net, meta, rgbd, annotator, thresh=0.05, show=True):
+def darknet_detect(net, meta, rgbd, annotator, filename=".tmp/frame.jpg", thresh=0.05, show=True):
     rgb, depth = split_rgbd(rgbd)
-    cv2.imwrite(".tmp/frame.jpg", rgb)
-    detections = darknet.detect(net, meta, ".tmp/frame.jpg".encode("ascii"), thresh=thresh)
+    cv2.imwrite(filename, rgb)
+
+    detections = darknet.detect(net, meta, filename.encode("ascii"), thresh=thresh)
     detections_with_distances = add_distances(detections, depth)
+
     if show:
         annotator.add_patches(detections_with_distances, rgb, depth)
         cv2.imshow("darknet", rgb)
+
     return detections
 
 

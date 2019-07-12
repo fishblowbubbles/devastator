@@ -53,13 +53,3 @@ class D435i:
         finally:
             self.pipeline.stop()
             server.terminate()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--host", default=HOST)
-    parser.add_argument("--port", type=int, default=PORT)
-    args = parser.parse_args()
-
-    d435i = D435i(host=args.host, port=args.port)
-    d435i.run()
