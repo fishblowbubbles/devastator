@@ -32,6 +32,15 @@ def send_data(connection, data):
         print("A pipe broke ...")
 
 
+def connect_and_send(data, host, port):
+    with socket.socket() as client:
+        try:
+            client.connect((host, port))
+            send_data(client, data)
+        except ConnectionRefusedError:
+            print("The connection was refused ...")
+
+
 class ConfigFile:
     def __init__(self, path):
         self.config = configparser.ConfigParser()

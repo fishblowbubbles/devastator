@@ -8,55 +8,49 @@ import numpy as np
 import pyaudio
 from scipy.io import wavfile
 
-from helpers import recv_obj, send_data
+from robot.helpers import recv_obj, send_data
 
 HOST = "127.0.0.1"
 PORT = 5555
 
-# DEVICE_NAME = "ReSpeaker 4 Mic Array (UAC1.0)"
-DEVICE_NAME = "HDA Intel PCH: ALC233 Analog (hw:0,0)"
+DEVICE_NAME = "ReSpeaker 4 Mic Array (UAC1.0)"
 
-# RATE=16000
-RATE = 44100
-# CHANNELS = 6
-CHANNELS = 1
 WIDTH = 2
-
 CHUNK_SIZE = 1024
 SECONDS = 5
 
 
 class ReSpeaker:
-    def __init__(self, rate=RATE, width=WIDTH, channels=CHANNELS, chunk_size=CHUNK_SIZE, seconds=SECONDS,
+    def __init__(self, width=WIDTH, chunk_size=CHUNK_SIZE, seconds=SECONDS,
                  device_name=DEVICE_NAME, host=HOST, port=PORT):
         self.host, self.port = host, port
 
         self.audio = pyaudio.PyAudio()
-        self.rate, self.channels, self.chunk_size = rate, channels, chunk_size
-        self.stream = self._get_stream(device_name, rate, width, channels)
+        self.device_info = self._get_device_info(device_name)
+        self.stream = self._get_stream(self.device_info, width)
 
-        num_samples = int(self.rate / self.chunk_size * seconds)
+        num_samples = int(self.device_info["defaultSampleRate"] / chunk_size * seconds)
+        self.channels, self.chunk_size = self.device_info["maxInputChannels"], chunk_size
         self.buffer = deque(maxlen=num_samples)
         self.requests = Queue()
 
-    def _get_stream(self, device_name, rate, width, channels):
-        device_index = self._get_device_index(device_name)
-        format = self.audio.get_format_from_width(width)
-        stream = self.audio.open(rate=rate,
-                                 format=format,
-                                 channels=channels,
-                                 input=True,
-                                 input_device_index=device_index)
-        return stream
-
-    def _get_device_index(self, device_name):
+    def _get_device_info(self, device_name):
         for i in range(self.audio.get_device_count()):
             device_info = self.audio.get_device_info_by_index(i)
-            if device_info.get("name") == device_name:
-                return i
+            if device_name in device_info.get("name"):
+                return device_info
         else:
             message = "{} not found".format(device_name)
             raise Exception(message)
+
+    def _get_stream(self, device_info, width):
+        format = self.audio.get_format_from_width(width)
+        stream = self.audio.open(rate=int(device_info["defaultSampleRate"]),
+                                 format=format,
+                                 channels=device_info["maxInputChannels"],
+                                 input=True,
+                                 input_device_index=device_info["index"])
+        return stream
 
     def _to_wav_array(self, samples, num_samples):
         shape =  (num_samples * self.chunk_size, self.channels)
@@ -71,7 +65,7 @@ class ReSpeaker:
 
     def _start_server(self):
         with socket.socket() as server:
-            server.bind(self.host, self.port)
+            server.bind((self.host, self.port))
             server.listen()
             while True:
                 connection, _ = server.accept()
@@ -106,5 +100,5 @@ if __name__ == "__main__":
     parser.add_argument("--seconds", type=int, default=SECONDS)
     args = parser.parse_args()
 
-    respeaker = ReSpeaker()
+    respeaker = ReSpeaker(seconds=args.seconds)
     respeaker.run()

@@ -9,11 +9,11 @@ import serial
 from robot import xpad
 from robot.helpers import ConfigFile, recv_obj
 
-CONFIG = ConfigFile("config.ini")
+CONFIG = ConfigFile("robot/config.ini")
 
-# HOST = "localhost"
+HOST = "localhost"
 # HOST = "192.168.1.178"  # UP-Squared 1
-HOST = "192.168.1.232"  # UP-Squared 2
+# HOST = "192.168.1.232"  # UP-Squared 2
 PORT = 8888
 
 DEVICE_ID = "usb-Arduino_LLC_Arduino_Leonardo-if00"
@@ -104,13 +104,13 @@ class Romeo:
             self.trim_voltage(R_MOTOR, y)
 
     def _handle_a_btn(self, value):
-        if value == xpad.BTN_DOWN:
+        if value == xpad.DOWN:
             if self.control_mode == "Trigger":
                 self.direction = next(self.change_direction)
                 print("Trigger Direction = {}".format(self.direction))
 
     def _handle_b_btn(self, value):
-        if value == xpad.BTN_DOWN:
+        if value == xpad.DOWN:
             self.control_mode = next(self.change_control_mode)
             print("Control Mode      = {}".format(self.control_mode))
 
