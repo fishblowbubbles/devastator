@@ -9,6 +9,7 @@ import pyaudio
 from scipy.io import wavfile
 
 from robot.helpers import recv_obj, send_data
+from robot.micarray import tuning
 
 HOST = "127.0.0.1"
 PORT = 5555
@@ -19,7 +20,9 @@ RATE = 16000
 CHANNELS = 6
 WIDTH = 2
 CHUNK_SIZE = 1024
-BUFFER_SIZE_IN_SECONDS = 5
+BUFFER_SIZE_IN_SECONDS = 2
+
+api = tuning.find()
 
 
 class ReSpeaker:
