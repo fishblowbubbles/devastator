@@ -16,18 +16,28 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.robot:
-        devices = { # "realsense": D435i(),
+        # load the hardware
+        devices = {"realsense": D435i(),
                    "respeaker": ReSpeaker(),
                    "romeo": Romeo()}
+        # load your algorithms
     elif args.app:
         devices = {"xpad": XPad()}
     else:
         sys.exit()
 
     processes = {}
+
     for name, device in devices.items():
         processes[name] = Process(target=device.run)
+
     for name, device in processes.items():
-        print("Starting {} ... ".format(name), end="")
         device.start()
-        print("ready")
+
+    """
+    while True:
+        get_frame
+        yolo_detect
+        acoular_detect = marker position, angle et.
+        send something to your app
+    """
