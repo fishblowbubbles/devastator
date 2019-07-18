@@ -33,6 +33,7 @@ if __name__ == "__main__":
 
     for name, device in processes.items():
         device.start()
+<<<<<<< HEAD
 
     """
     while True:
@@ -40,4 +41,14 @@ if __name__ == "__main__":
         yolo_detect
         acoular_detect = marker position, angle et.
         send something to your app
+=======
+        print("ready")
+
+    """
+    while True:
+        get_frame()
+        yolo_detect()
+        acoular_detect()
+        send_to_app()
+>>>>>>> 0cdfa2f... outline for main
     """
