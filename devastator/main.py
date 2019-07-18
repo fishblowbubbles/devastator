@@ -36,8 +36,8 @@ if __name__ == "__main__":
 
     """
     while True:
-        get_frame
-        yolo_detect
-        acoular_detect = marker position, angle et.
-        send something to your app
+        get_frame()
+        yolo_detect()
+        acoular_detect()
+        send_to_app()
     """
