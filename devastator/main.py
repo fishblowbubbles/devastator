@@ -31,3 +31,11 @@ if __name__ == "__main__":
         print("Starting {} ... ".format(name), end="")
         device.start()
         print("ready")
+
+    """
+    while True:
+        get_frame()
+        yolo_detect()
+        acoular_detect()
+        send_to_app()
+    """
