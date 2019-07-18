@@ -5,6 +5,7 @@ venv
 
 .tmp/audio.wav
 .tmp/frame.jpg
+*.xml
 
 devastator/vision/darknet/backup/custom.weights
 
@@ -15,4 +16,5 @@ devastator/sound/__pycache__
 devastator/sound/vokaturi/__pycache__
 devastator/vision/__pycache__
 devastator/vision/darknet/__pycache__/
-*.xml
+devastator/navigation/__pycache__
+devastator/navigation/angle_driver.py
