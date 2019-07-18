@@ -1,6 +1,8 @@
 .vscode
-.tmp
 venv
+
+.tmp/audio.wav
+.tmp/frame.jpg
 
 devastator/__pycache__
 devastator/robot/__pycache__

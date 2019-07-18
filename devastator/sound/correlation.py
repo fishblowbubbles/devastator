@@ -59,6 +59,7 @@ class ReSpeaker(object):
                 # print(self.data.shape)
                 self.data = np.concatenate((self.data, inputs))
 
+
     @staticmethod
     def normalize(data):
         def rms(d):
@@ -167,8 +168,8 @@ class ReSpeaker(object):
 
 
 if __name__ == '__main__':
-    respeaker = ReSpeaker(with_microphone = False, template_path = 'correlation_data/normalized_template.wav')
-    respeaker.get_input("correlation_data/Rifle,Bolt Action,.30-06,Arisaka,Gunshot,Processed,3,Medium Distant.wav")
+    respeaker = ReSpeaker(with_microphone = False, template_path = 'devastator/sound/data/normalized_template.wav')
+    respeaker.get_input("devastator/sound/data/Rifle,Bolt Action,.30-06,Arisaka,Gunshot,Processed,3,Medium Distant.wav")
     print(respeaker.get_correlation())
 
     # respeaker.record_and_save(record_seconds = 5)

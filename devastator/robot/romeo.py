@@ -26,9 +26,14 @@ CONTROL_MODES = ["Joystick", "Trigger"]
 
 
 class Romeo:
-    def __init__(self, device_id=DEVICE_ID, config=CONFIG, host=HOST, port=PORT):
+    def __init__(self,
+                 device_id=DEVICE_ID,
+                 config=CONFIG,
+                 host=HOST,
+                 port=PORT):
         device_path = "/dev/serial/by-id/{}".format(device_id)
-        self.serial = serial.Serial(device_path, config.get("romeo", "baudrate"))
+        self.serial = serial.Serial(device_path,
+                                    config.get("romeo", "baudrate"))
         self.device_path, self.config = device_path, config
         self.host, self.port = host, port
 
@@ -45,18 +50,28 @@ class Romeo:
         self.direction = next(self.change_direction)
         self.control_mode = next(self.change_control_mode)
 
-        self.state = {xpad.L_JS_Y: 0,
-                       xpad.L_TRIG: 0,
-                       xpad.R_JS_X: 0,
-                       xpad.R_TRIG: 0}
+        self.state = {
+            xpad.L_JS_Y: 0,
+            xpad.L_TRIG: 0,
+            xpad.R_JS_X: 0,
+            xpad.R_TRIG: 0
+        }
 
-        self.callbacks = {xpad.AXIS: {xpad.L_JS_Y: self._handle_left_joystick_y,
-                                      xpad.L_TRIG: self._handle_left_trigger,
-                                      xpad.R_JS_X: self._handle_right_joystick_x,
-                                      xpad.R_TRIG: self._handle_right_trigger},
-                          xpad.HAT: {xpad.DPAD: self._handle_dpad},
-                          xpad.BTN_DOWN: {xpad.A_BTN : self._handle_a_btn,
-                                          xpad.B_BTN : self._handle_b_btn}}
+        self.callbacks = {
+            xpad.AXIS: {
+                xpad.L_JS_Y: self._handle_left_joystick_y,  # throttle
+                xpad.L_TRIG: self._handle_left_trigger,     # left motor
+                xpad.R_JS_X: self._handle_right_joystick_x, # steering
+                xpad.R_TRIG: self._handle_right_trigger     # right motor
+            },
+            xpad.HAT: {
+                xpad.DPAD: self._handle_dpad                # adjust/trim motor voltage
+            },
+            xpad.BTN_DOWN: {
+                xpad.A_BTN: self._handle_a_btn,             # toggle direction (trigger mode only)
+                xpad.B_BTN: self._handle_b_btn              # toggle control mode
+            }
+        }
 
     """ MATH HELPERS """
 
@@ -181,7 +196,8 @@ class Romeo:
         return voltage
 
     def set_voltage(self, motor, voltage):
-        self.config.save("romeo", "{}voltage".format(("left", "right")[motor - 1]), voltage)
+        self.config.save("romeo", "{}voltage".format(
+            ("left", "right")[motor - 1]), voltage)
         print("{} Motor Voltage   = {}".format(("L", "R")[motor - 1], voltage))
         message = "motor{}_voltage {}".format(motor, voltage)
         self._send_serial(message)

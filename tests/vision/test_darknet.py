@@ -7,10 +7,9 @@ import cv2
 import numpy as np
 
 import robot.realsense as realsense
-import vision.darknet as darknet
-from helpers import darknet_livestream
 from robot.helpers import get_data
-from vision.helpers import Annotator, darknet_detect
+from vision.darknet import darknet
+from vision.helpers import Annotator, darknet_detect, darknet_livestream
 
 PATH2WEIGHTS = "devastator/vision/darknet/backup/custom_8.weights"
 PATH2NAMES = "devastator/vision/darknet/data/custom_8.names"

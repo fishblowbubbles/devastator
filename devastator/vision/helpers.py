@@ -4,7 +4,9 @@ import socket
 import cv2
 import numpy as np
 
-import vision.darknet as darknet
+from robot import realsense
+from robot.helpers import get_data
+from vision.darknet import darknet
 
 INPUT_MAP = [[200, 10], [1080, 10], [1270, 710], [10, 710]]
 OUTPUT_MAP = [[0, 0], [1280, 0], [1280, 720], [0, 720]]
@@ -64,6 +66,15 @@ def darknet_detect(net, meta, rgbd, annotator, filename=".tmp/frame.jpg", thresh
         cv2.imshow("darknet", rgb)
 
     return detections
+
+
+def darknet_livestream(net, meta, annotator, thresh=0.05, fps=24):
+    delay = int(100 / fps)
+    while True:
+        rgbd = get_data(realsense.HOST, realsense.PORT)
+        darknet_detect(net, meta, rgbd, annotator)
+        if cv2.waitKey(delay) == ord("q"): break
+    cv2.destroyAllWindows()
 
 
 def get_distance(x, y, depth):
