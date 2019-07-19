@@ -11,16 +11,14 @@ from scipy.io import wavfile
 from robot.helpers import recv_obj, send_data
 from robot.micarray import tuning
 
-HOST = "127.0.0.1"
-PORT = 5555
+HOST = "localhost"
+PORT = 7777
 
 DEVICE_NAME = "ReSpeaker 4 Mic Array (UAC1.0)"
 
-RATE = 16000
-CHANNELS = 6
-WIDTH = 2
+RATE, CHANNELS, WIDTH = 16000, 6, 2
 CHUNK_SIZE = 1024
-BUFFER_SIZE_IN_SECONDS = 2
+BUFFER_SIZE_IN_SECONDS = 20
 
 api = tuning.find()
 
@@ -65,12 +63,16 @@ class ReSpeaker:
             send_data(connection, samples)
 
     def _start_server(self):
-        with socket.socket() as server:
-            server.bind((self.host, self.port))
+        server = socket.socket()
+        server.bind((self.host, self.port))
+        try:
             server.listen()
             while True:
                 connection, _ = server.accept()
                 self.requests.put(connection)
+        finally:
+            server.shutdown(socket.SHUT_RDWR)
+            server.close()
 
     def get_sample(self):
         sample = self.stream.read(self.chunk_size, exception_on_overflow=False)
@@ -80,6 +82,7 @@ class ReSpeaker:
 
     def run(self):
         server = Process(target=self._start_server)
+        server.daemon = True
         server.start()
         try:
             while True:

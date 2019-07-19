@@ -14,7 +14,7 @@ CONFIG = ConfigFile("devastator/robot/config.ini")
 HOST = "localhost"
 # HOST = "192.168.1.178"  # UP-Squared 1
 # HOST = "192.168.1.232"  # UP-Squared 2
-PORT = 8888
+PORT = 6666
 
 DEVICE_ID = "usb-Arduino_LLC_Arduino_Leonardo-if00"
 ENABLE, DISABLE = "enable", "disable"
@@ -26,11 +26,7 @@ CONTROL_MODES = ["Joystick", "Trigger"]
 
 
 class Romeo:
-    def __init__(self,
-                 device_id=DEVICE_ID,
-                 config=CONFIG,
-                 host=HOST,
-                 port=PORT):
+    def __init__(self, device_id=DEVICE_ID, config=CONFIG, host=HOST, port=PORT):
         device_path = "/dev/serial/by-id/{}".format(device_id)
         self.serial = serial.Serial(device_path,
                                     config.get("romeo", "baudrate"))
@@ -211,14 +207,16 @@ class Romeo:
     """ MAIN LOOP """
 
     def run(self):
-        with socket.socket() as server:
-            server.bind((self.host, self.port))
+        server = socket.socket()
+        server.bind((self.host, self.port))
+        try:
             server.listen()
-            try:
-                while True:
-                    connection, _ = server.accept()
-                    events = recv_obj(connection)
-                    self._handle_events(events)
-                    self._execute_movement()
-            finally:
-                self.stop_motors()
+            while True:
+                connection, _ = server.accept()
+                events = recv_obj(connection)
+                self._handle_events(events)
+                self._execute_movement()
+        finally:
+            self.stop_motors()
+            server.shutdown(socket.SHUT_RDWR)
+            server.close()

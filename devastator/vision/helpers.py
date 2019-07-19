@@ -11,16 +11,16 @@ from vision.darknet import darknet
 INPUT_MAP = [[200, 10], [1080, 10], [1270, 710], [10, 710]]
 OUTPUT_MAP = [[0, 0], [1280, 0], [1280, 720], [0, 720]]
 RESOLUTION = (1280, 720)
-COLORS = [[31, 119, 180, 255], [174, 199, 232, 255],
-          [255, 127, 14, 255], [255, 187, 120, 255],
-          [44, 160, 44, 255], [152, 223, 138, 255],
-          [214, 39, 40, 255], [255, 152, 150, 255],
+COLORS = [[31, 119, 180, 255] , [174, 199, 232, 255],
+          [255, 127, 14, 255] , [255, 187, 120, 255],
+          [44, 160, 44, 255]  , [152, 223, 138, 255],
+          [214, 39, 40, 255]  , [255, 152, 150, 255],
           [148, 103, 189, 255], [197, 176, 213, 255],
-          [140, 86, 75, 255], [196, 156, 148, 255],
+          [140, 86, 75, 255]  , [196, 156, 148, 255],
           [227, 119, 194, 255], [247, 182, 210, 255],
           [127, 127, 127, 255], [199, 199, 199, 255],
-          [188, 189, 34, 255], [219, 219, 141, 255],
-          [23, 190, 207, 255], [158, 218, 229, 255]]
+          [188, 189, 34, 255] , [219, 219, 141, 255],
+          [23, 190, 207, 255] , [158, 218, 229, 255]]
 
 
 def load_names(path):
@@ -54,6 +54,13 @@ class Detection:
         self.distance = distance
 
 
+def load_darknet():
+    net = darknet.load_net(darknet.PATH2CFG.encode("ascii"), darknet.PATH2WEIGHTS.encode("ascii"), 0)
+    meta = darknet.load_meta(darknet.PATH2DATA.encode("ascii"))
+    annotator = Annotator(path2names=darknet.PATH2NAMES)
+    return net, meta, annotator
+
+
 def darknet_detect(net, meta, rgbd, annotator, filename=".tmp/frame.jpg", thresh=0.05, show=True):
     rgb, depth = split_rgbd(rgbd)
     cv2.imwrite(filename, rgb)
@@ -68,12 +75,13 @@ def darknet_detect(net, meta, rgbd, annotator, filename=".tmp/frame.jpg", thresh
     return detections
 
 
-def darknet_livestream(net, meta, annotator, thresh=0.05, fps=24):
+def darknet_livestream(net, meta, annotator, thresh=darknet.THRESH, fps=darknet.FPS):
     delay = int(100 / fps)
     while True:
         rgbd = get_data(realsense.HOST, realsense.PORT)
-        darknet_detect(net, meta, rgbd, annotator)
-        if cv2.waitKey(delay) == ord("q"): break
+        darknet_detect(net, meta, rgbd, annotator, thresh=thresh)
+        if cv2.waitKey(delay) == ord("q"):
+            break
     cv2.destroyAllWindows()
 
 

@@ -12,20 +12,21 @@ from robot.helpers import get_data
 
 EMOTIONS = {0: "Neutral", 1: "Happy", 2: "Sad", 3: "Anger", 4: "Fear"}
 
-GUNSHOT_THRESHOLD = 1.0
+GUNSHOT_THRESHOLD = 0.05
 _, GUNSHOT_TEMPLATE = wavfile.read("devastator/sound/data/normalized_template.wav")
-INTERVAL = 1024
+TEMPLATE_LENGTH, INTERVAL = 163840, 2000
 
 
-def rms_normalize(samples):
-    samples = samples / max(samples)
-    rms = (sum(samples ** 2) / len(samples)) ** 0.5
-    samples = samples * rms
-    return samples
+def normalize(data):
+    def rms(d):
+        return (sum(d**2) / len(d))**0.5
+    output = data / max(data)
+    output = output * rms(output)
+    return output
 
 
 def gunshot_detect(samples, template=GUNSHOT_TEMPLATE, threshold=GUNSHOT_THRESHOLD, interval=INTERVAL):
-    samples = rms_normalize(samples)
+    samples = normalize(samples[:TEMPLATE_LENGTH])
     correlation = signal.correlate(samples, template, mode="same")
     correlation = max_filter(correlation, interval)
     correlation = np.amax(correlation)
@@ -36,12 +37,11 @@ def gunshot_detect(samples, template=GUNSHOT_TEMPLATE, threshold=GUNSHOT_THRESHO
 def gunshot_livestream():
     while True:
         samples = get_data(respeaker.HOST, respeaker.PORT)
-        gunshot = gunshot_detect(samples)
+        gunshot = gunshot_detect(samples[:, 0])
         direction = respeaker.api.direction
         if gunshot:
-            print("Gunshots: {}\tDirection: {:10}".format(gunshot, direction))
-        else:
-            print("No gunshot detected ...")
+            print("\rGunshots: {}\tDirection: {:10}"
+                  .format(gunshot, direction), end="")
 
 
 def vokaturi_func(filename):
@@ -77,20 +77,18 @@ def vokaturi_func(filename):
     return emotion, confidence
 
 
-def vokaturi_detect(samples, rate=respeaker.RATE, filename=".tmp/audio.wav"):
+def emotion_detect(samples, rate=respeaker.RATE, filename=".tmp/audio.wav"):
     wavfile.write(filename, rate, samples)
-    detection = vokaturi_func(filename)
-    return detection
+    emotion, confidence = vokaturi_func(filename)
+    return emotion, confidence
 
 
-def vokaturi_livestream(filename=".tmp/audio.wav", rate=respeaker.RATE):
+def emotion_livestream(rate=respeaker.RATE, filename=".tmp/audio.wav", ):
     while True:
-        samples = get_data(respeaker.HOST, respeaker.PORT)[:, 0]
+        samples = get_data(respeaker.HOST, respeaker.PORT)
         direction = respeaker.api.direction
         voice = respeaker.api.is_voice()
         if voice:
-            emotion, confidence = vokaturi_detect(samples, rate, filename)
+            emotion, confidence = emotion_detect(samples[:, 0], rate, filename)
             print("Emotion: {:10}\tConfidence: {:10.2}\tDirection: {:10}"
-                    .format(emotion, confidence, direction))
-        else:
-            print("No voice detected ...")
+                  .format(emotion, confidence, direction), end="")

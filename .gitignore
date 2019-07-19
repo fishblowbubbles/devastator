@@ -4,8 +4,12 @@ venv
 .tmp/audio.wav
 .tmp/frame.jpg
 
+devastator/vision/darknet/backup/custom.weights
+
 devastator/__pycache__
 devastator/robot/__pycache__
+devastator/robot/micarray/__pycache__/
 devastator/sound/__pycache__
 devastator/sound/vokaturi/__pycache__
 devastator/vision/__pycache__
+devastator/vision/darknet/__pycache__/
