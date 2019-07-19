@@ -1,7 +1,7 @@
 import pygame
 import socket
-from app.pygame_functions import *
-from app.helpers import *
+from pygame_functions import *
+from helpers import *
 
 #
 # pygame.init()
@@ -13,10 +13,10 @@ curr_x = 0.0
 curr_y = 0.0
 
 # # #note:
-# # #Marker 1 is at position (87,505) on map
-# # #Marker 2 is at position (98,200) on map
-# # #Mmarker 3 is at position (390,90) on map
-# # #Marker 4 is at position (790, 90) on map
+# # #Marker 1 is at position (50,740) on map
+# # #Marker 2 is at position (55,210) on map
+# # #Mmarker 3 is at position (715,210) on map
+# # #Marker 4 is at position (670, 40) on map
 # # #Marker 5 is at position (825,460) on map
 # # #Marker 6 is at position (600,665) on map
 
@@ -24,9 +24,9 @@ def init_pos (robot):
     global curr_x
     global curr_y
 
-    moveSprite(robot, 430, 720, True) #init position of robot
-    curr_x = 430
-    curr_y = 720
+    moveSprite(robot, 50, 740, True) #init position of robot
+    curr_x = 50
+    curr_y = 740
 
 def calculate_position(robot,information):
     global curr_x
@@ -37,8 +37,8 @@ def calculate_position(robot,information):
         angle_radians = float(angle_val)*(math.pi/180.0)
         distance_in_metres = information["distanceToMarker"]
         distance =  distance_in_metres * (720.0/3.87)
-        new_x = 87 + float(distance)*math.sin(angle_radians)
-        new_y = 505 + float(distance)*math.cos(angle_radians)
+        new_x = 50 + float(distance)*math.sin(angle_radians)
+        new_y = 740 + float(distance)*math.cos(angle_radians)
         curr_x = new_x
         curr_y  = new_y
         pause(600)
@@ -49,8 +49,8 @@ def calculate_position(robot,information):
         angle_radians = float(angle_val)*(math.pi/180.0)
         distance_in_metres = information["distanceToMarker"]
         distance =  distance_in_metres * (720.0/3.87)
-        new_x = 98 + float(distance)*math.sin(angle_radians)
-        new_y = 200 + float(distance)*math.cos(angle_radians)
+        new_x = 55 + float(distance)*math.sin(angle_radians)
+        new_y = 210 + float(distance)*math.cos(angle_radians)
         curr_x = new_x
         curr_y  = new_y
         pause(600)
@@ -61,8 +61,8 @@ def calculate_position(robot,information):
         angle_radians = float(angle_val)*(math.pi/180.0)
         distance_in_metres = information["distanceToMarker"]
         distance =  distance_in_metres * (720.0/3.87)
-        new_x = 390 + float(distance)*math.sin(angle_radians)
-        new_y = 90 + float(distance)*math.cos(angle_radians)
+        new_x = 715 + float(distance)*math.sin(angle_radians)
+        new_y = 210 + float(distance)*math.cos(angle_radians)
         curr_x = new_x
         curr_y  = new_y
         pause(600)
@@ -73,36 +73,36 @@ def calculate_position(robot,information):
         angle_radians = float(angle_val)*(math.pi/180.0)
         distance_in_metres = information["distanceToMarker"]
         distance =  distance_in_metres * (720.0/3.87)
-        new_x = 790 + float(distance)*math.sin(angle_radians)
-        new_y = 90 + float(distance)*math.cos(angle_radians)
+        new_x = 670 + float(distance)*math.sin(angle_radians)
+        new_y = 40 + float(distance)*math.cos(angle_radians)
         curr_x = new_x
         curr_y  = new_y
         pause(600)
         moveSprite(robot,new_x,new_y,True)
 
-    elif str(information["marker"]) =="5":
-        angle_val = information["angleToMarker"]
-        angle_radians = float(angle_val)*(math.pi/180.0)
-        distance_in_metres = information["distanceToMarker"]
-        distance =  distance_in_metres * (720.0/3.87)
-        new_x = 825 + float(distance)*math.sin(angle_radians)
-        new_y = 460 + float(distance)*math.cos(angle_radians)
-        curr_x = new_x
-        curr_y  = new_y
-        pause(600)
-        moveSprite(robot,new_x,new_y,True)
-
-    elif str(information["marker"]) =="6":
-        angle_val = information["angleToMarker"]
-        angle_radians = float(angle_val)*(math.pi/180.0)
-        distance_in_metres = information["distanceToMarker"]
-        distance =  distance_in_metres * (720.0/3.87)
-        new_x = 600 + float(distance)*math.sin(angle_radians)
-        new_y = 665 + float(distance)*math.cos(angle_radians)
-        curr_x = new_x
-        curr_y  = new_y
-        pause(600)
-        moveSprite(robot,new_x,new_y,True)
+    # elif str(information["marker"]) =="5":
+    #     angle_val = information["angleToMarker"]
+    #     angle_radians = float(angle_val)*(math.pi/180.0)
+    #     distance_in_metres = information["distanceToMarker"]
+    #     distance =  distance_in_metres * (720.0/3.87)
+    #     new_x = 825 + float(distance)*math.sin(angle_radians)
+    #     new_y = 460 + float(distance)*math.cos(angle_radians)
+    #     curr_x = new_x
+    #     curr_y  = new_y
+    #     pause(600)
+    #     moveSprite(robot,new_x,new_y,True)
+    #
+    # elif str(information["marker"]) =="6":
+    #     angle_val = information["angleToMarker"]
+    #     angle_radians = float(angle_val)*(math.pi/180.0)
+    #     distance_in_metres = information["distanceToMarker"]
+    #     distance =  distance_in_metres * (720.0/3.87)
+    #     new_x = 600 + float(distance)*math.sin(angle_radians)
+    #     new_y = 665 + float(distance)*math.cos(angle_radians)
+    #     curr_x = new_x
+    #     curr_y  = new_y
+    #     pause(600)
+    #     moveSprite(robot,new_x,new_y,True)
 
 def place_marker(information):
     if information["objectsDetected"] == "SUSPECT":
