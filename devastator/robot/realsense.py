@@ -1,4 +1,3 @@
-import argparse
 import pickle
 import socket
 from multiprocessing import Process, Queue
@@ -8,14 +7,16 @@ import pyrealsense2 as rs
 
 from robot.helpers import recv_obj, send_data
 
-HOST = "127.0.0.1"
+HOST = "localhost"
 PORT = 4444
 
 
-class D435i:
-    def __init__(self, host=HOST, port=PORT):
+class D435i():
+    def __init__(self, host, port):
         self.host, self.port = host, port
         self.requests = Queue()
+
+        self.align = rs.align(rs.stream.color)
         self.pipeline = rs.pipeline()
         self.pipeline.start()
 
@@ -33,23 +34,26 @@ class D435i:
             send_data(connection, rgbd)
 
     def _start_server(self):
-        with socket.socket() as server:
-            server.bind((self.host, self.port))
+        server = socket.socket()
+        server.bind((self.host, self.port))
+        try:
             server.listen()
             while True:
                 connection, _ = server.accept()
                 self.requests.put(connection)
+        finally:
+            server.shutdown(socket.SHUT_RDWR)
+            server.close()
 
     def run(self):
         server = Process(target=self._start_server)
+        server.daemon = True
         server.start()
         try:
             while True:
                 frames = self.pipeline.wait_for_frames()
-                if self.requests.empty():
-                    continue
-                else:
-                    self._process_requests(frames)
+                frames = self.align.process(frames)
+                self._process_requests(frames)
         finally:
             self.pipeline.stop()
             server.terminate()

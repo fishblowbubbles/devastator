@@ -1,0 +1,5 @@
+classes=9
+train=devastator/vision/darknet/data/train.txt
+valid=devastator/vision/darknet/data/validation.txt
+names=devastator/vision/darknet/data/custom.names
+backup=devastator/vision/darknet/backup
