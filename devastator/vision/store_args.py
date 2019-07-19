@@ -25,6 +25,19 @@ SUN_GLASSES_COUNT = 0
 PERSON_COUNT = 0
 POLICE_COUNT = 0
 OBJ_OF_INTEREST = ""
+JSON_INFO = {
+    "data": {
+        "logs1": {
+            "Time_Stamp": "12:10:17",
+            "Robot_Coordinates": "x,y,z",
+            "Threat_Direction": "x,y,z",
+            "Emotions_Present": "Fear",
+            "Gunshots": "Detected",
+            "Objects_Of_Interest": OBJ_OF_INTEREST,
+            "More_Details": "<a href= www.google.com.sg>www.viewmorehere.com  </a>"
+        }
+    }
+}
 
 
 #----------------------- detection ------------------------
@@ -55,7 +68,8 @@ class StoreArgs:
                  hat_count=HAT_COUNT,
                  police_count=POLICE_COUNT,
                  knife_count=KNIFE_COUNT,
-                 obj_of_interest=OBJ_OF_INTEREST
+                 obj_of_interest=OBJ_OF_INTEREST,
+                 json_info=JSON_INFO
 
                  ):
         # self.input_stream = input_stream
@@ -80,4 +94,5 @@ class StoreArgs:
         self.jacket_count = jacket_count
         self.sunglass_count = sunglass_count
         self.obj_of_interest = obj_of_interest
+        self.json_info = json_info
 
