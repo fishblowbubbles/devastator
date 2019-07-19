@@ -24,6 +24,7 @@ HAT_COUNT = 0
 SUN_GLASSES_COUNT = 0
 PERSON_COUNT = 0
 POLICE_COUNT = 0
+OBJ_OF_INTEREST = ""
 
 
 #----------------------- detection ------------------------
@@ -53,7 +54,8 @@ class StoreArgs:
                  jacket_count=JACKET_COUNT,
                  hat_count=HAT_COUNT,
                  police_count=POLICE_COUNT,
-                 knife_count=KNIFE_COUNT
+                 knife_count=KNIFE_COUNT,
+                 obj_of_interest=OBJ_OF_INTEREST
 
                  ):
         # self.input_stream = input_stream
@@ -77,4 +79,5 @@ class StoreArgs:
         self.hat_count = hat_count
         self.jacket_count = jacket_count
         self.sunglass_count = sunglass_count
+        self.obj_of_interest = obj_of_interest
 

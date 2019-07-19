@@ -66,9 +66,23 @@ if __name__ == "__main__":
                     StoreArgs.police_count += 1
 
                 elif j["label"] == "Hat":
-                    storeArgs.hat_count += 1
+                    StoreArgs.hat_count += 1
 
-
+        ###format the data for objects of interest to parse into report ui app
+        StoreArgs.obj_of_interest = "Handgun: " + str(StoreArgs.handgun_count) + "  <p/> " + "Jacket: " + str(StoreArgs.jacket_count) + " <p/> " + "Knife: " + str(StoreArgs.knife_count) + " <p/> " + "Person: " + str(StoreArgs.person_count) + " <p/> " + "Rifle " + str(rifle_count) + " <p/> " + "Sunglasses: " + str(StoreArgs.sunglass_count) + " <p/> " + "Police: " + str(StoreArgs.police_count) + " <p/> "
+        JSON_INFO = {
+            "data": {
+                "logs1": {
+                    "Time_Stamp": "12:10:17",
+                    "Robot_Coordinates": "x,y,z",
+                    "Threat_Direction": "x,y,z",
+                    "Emotions_Present": "Fear",
+                    "Gunshots": "Detected",
+                    "Objects_Of_Interest": StoreArgs.obj_of_interest,
+                    "More_Details": "<a href= www.google.com.sg>www.viewmorehere.com  </a>"
+                }
+            }
+        }
 
 
 
