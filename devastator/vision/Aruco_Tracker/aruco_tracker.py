@@ -14,6 +14,8 @@ import timeit
 
 marker_side = 15.5  # cm
 device = "cam"
+marker_distance = 1 # m
+perceived_focal_length = 20
 
 
 def get_frame(input_stream, HOST=None, PORT=None):
@@ -59,6 +61,18 @@ def get_side_length(corners):
         sides_list.append(dist)
 
     return sum(sides_list) / len(sides_list)
+
+
+def get_perceived_focal_length(corners, actual_size, distance):
+    p = get_side_length(corners)
+    f = p * distance / actual_size
+
+    return f
+
+
+def get_depth(corners, actual_size, perceived_focal_length):
+    p = get_side_length(corners)
+    return actual_size * perceived_focal_length / p
 
 
 start = timeit.default_timer()
@@ -115,8 +129,13 @@ while (True):
             client.connect((HOST, PORT))
             frame = recv_object(client)
             frame, depth = cv2.cvtColor(frame[:, :, :3].astype(np.uint8), cv2.COLOR_RGB2BGR), frame[:, :, 3].astype(np.uint8)
-    # operations on the frame
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    
+    try:
+        # operations on the frame
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    except cv2.error:
+        print("empty frame")
+        continue
 
     # set dictionary size depending on the aruco marker selected
     aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
@@ -154,17 +173,23 @@ while (True):
             center_y = int(corners[i].mean(axis=1)[0][1])
             marker_h_angle = round((center_x - 640) * (87/1280),2)
             #depth_point = round(depth[center_y, center_x]/1000,2)
-            depth_point = 0
+            depth_point = get_depth(corners[i], marker_side,
+                    perceived_focal_length)
             marker_details["angleToMarker"] = marker_h_angle
             #marker_details["distanceToMarker"] = depth_point
             marker_details["id"] = ids[i]
             markers.append(marker_details)
             cv2.putText(frame, str(depth_point) + "m, " + str(marker_h_angle) + " deg",
                         (int(corners[i][0][0][0]), int(corners[i][0][0][1]) - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0,255,0), 1)
-            print(get_side_length(corners[i]))
+            print(get_perceived_focal_length(corners[i], marker_side,
+                        marker_distance))
 
-        # draw a square around the markers            
-        aruco.drawDetectedMarkers(frame, corners)
+        try:
+            # draw a square around the markers            
+            aruco.drawDetectedMarkers(frame, corners)
+        except cv2.error:
+            print("draw markers error")
+            continue
 
         # code to show ids of the marker found
         strg = ''
