@@ -1,7 +1,7 @@
 import pygame
 import socket
-from pygame_functions import *
-from helpers import *
+from app.pygame_functions import *
+from app.helpers import *
 
 #
 # pygame.init()
