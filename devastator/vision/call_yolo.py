@@ -348,17 +348,9 @@ def main():
         labels_map = [x.strip() for x in f]
 
     frame = get_frame(args.input, HOST, PORT)
-<<<<<<< HEAD
-
-    detection = detect(frame, net, exec_net, labels_map, args.prob_threshold,  args.iou_threshold, depth_given = True)
-
-    return frame, detection #to get frame and detection vars
-
-=======
 
     prettyprint(detect(frame, net, exec_net, labels_map, args.prob_threshold,  args.iou_threshold, depth_given = True))
 
->>>>>>> a0f44de... aligned realsense depth with color and updated call_yolo functions
 
 
 if __name__ == '__main__':
