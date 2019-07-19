@@ -11,6 +11,7 @@ import cv2
 import socket
 import pickle
 from openvino.inference_engine import IENetwork, IEPlugin
+from robot.helpers import recv_obj
 
 
 
@@ -168,15 +169,16 @@ def corners2center(xmin,xmax,ymin,ymax):
     w = xmax - xmin
     return x, y, w, h
 
-def recv_object(client):
-    packets = []
-    while True:
-        packet = client.recv(1024)
-        if not packet:
-            break
-        packets.append(packet)
-    object = pickle.loads(b"".join(packets))
-    return object
+#### use the recv_obj func from robot.helpers instead
+# def recv_object(client):
+#     packets = []
+#     while True:
+#         packet = client.recv(1024)
+#         if not packet:
+#             break
+#         packets.append(packet)
+#     object = pickle.loads(b"".join(packets))
+#     return object
 
 def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_given = False):
     if depth_given:
@@ -257,7 +259,7 @@ def get_frame(input_stream, HOST=None, PORT=None):
     elif input_stream == "server":
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
             client.connect((HOST, PORT))
-            frame = recv_object(client)
+            frame = recv_obj(client)
         #RGBD
     else:
         input_stream
@@ -288,7 +290,9 @@ def main():
 
     frame = get_frame(args.input, HOST, PORT)
 
-    detect(frame, net, exec_net, labels_map, args.prob_threshold,  args.iou_threshold, depth_given = True)
+    detection = detect(frame, net, exec_net, labels_map, args.prob_threshold,  args.iou_threshold, depth_given = True)
+
+    return frame, detection #to get frame and detection vars
 
 
 

@@ -1,3 +1,11 @@
+###is the server in this case
+
+import json
+from flask_cors import CORS
+
+import socket, pickle
+
+#########################################################
 ###working prototype 2###
 from flask import Flask, render_template, jsonify
 
