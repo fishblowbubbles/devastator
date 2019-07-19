@@ -1,13 +1,23 @@
 import argparse
+import os
 import sys
+import time
 from multiprocessing import Process
 
+import cv2
+
+import robot.realsense as realsense
+import robot.respeaker as respeaker
+import robot.romeo as romeo
+import robot.xpad as xpad
 from robot.helpers import get_data
 from robot.realsense import D435i
 from robot.respeaker import ReSpeaker
 from robot.romeo import Romeo
 from robot.xpad import XPad
-from sound.helpers import vokaturi_func
+from sound.helpers import emotion_detect, gunshot_detect, vokaturi_func
+from vision.call_yolo import detect, get_frame, load_model, main
+from vision.store_args import *
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -16,26 +26,47 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.robot:
-        # load the hardware
-        devices = {"realsense": D435i(),
-                   "respeaker": ReSpeaker(),
-                   "romeo": Romeo()}
-        # load your algorithms
+        devices = {# "RealSense": realsense.D435i(),
+                   "Romeo": romeo.Romeo(),
+                   "ReSpeaker": respeaker.ReSpeaker()}
     elif args.app:
-        devices = {"xpad": XPad()}
+        devices = {"xpad": xpad.XPad()}
     else:
         sys.exit()
 
     processes = {}
-
     for name, device in devices.items():
         processes[name] = Process(target=device.run)
-
-    for name, device in processes.items():
-        device.start()
-        print("ready")
+    for name, process in processes.items():
+        print("Starting {} ...".format(name))
+        process.start()
 
     """
+    time.sleep(5)
+
+    try:
+        while True:
+            samples = get_data(respeaker.HOST, respeaker.PORT)
+            direction = respeaker.api.direction
+
+            gunshot = gunshot_detect(samples[:, 0])
+            if gunshot:
+                print("Gunshots: {:10}\tDirection: {:10}"
+                      .format(gunshot, direction))
+
+            voice = respeaker.api.is_voice()
+            if voice:
+                emotion, confidence = emotion_detect(samples[:, 0])
+                print("Emotion: {:10}\tConfidence: {:10.2}\tDirection: {:10}"
+                      .format(emotion, confidence, direction))
+    finally:
+        for name, process in processes.items():
+            print("Stopping {}".format(name))
+            process.terminate()
+    """
+
+
+#### for vision side (detecting people) ####
     while True:
         frame = main()[0]
         detection = main()[1] #gives a list of dictionaries
