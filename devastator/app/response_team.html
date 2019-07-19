@@ -1,92 +1,93 @@
++<!--include auto refresh-->
+<!--Finalised UI with autorefresh function (refreshes every 3 seconds (need to run flask server on NavigationWebUI first)-->
+
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <title>Datatables Example</title>
-  <meta charset="utf-8">
-  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap4.min.css"/>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/datatables.css') }}">
-  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
-  <script src="https://cdn.datatables.net/1.10.18/js/jquery.dataTables.min.js"></script>
-    <script type="text/javascript" src="/eel.js"></script>
-</head>
-<body>
-<h1>Report Logs</h1>
-<button type="button" onclick="update()" id="btnUpdate" style="background-color:yellow;border-radius: 15px;align-items: center;">Update</button>
- <div id="wrapper">
-<table id="example" class="display" style="width:100%">
-        <thead>
-            <tr>
-                <th>Time Stamp</th>
-                <th>Robot Coordinates</th>
-                <th>Emotions Present</th>
-                <th>Gunshots</th>
-                <th>Objects Of Interest</th>
-                <th>More Details</th>
-            </tr>
-        </thead>
+ <html>
+      <head>
+           <title>Webslesson Tutorial | Show JSON Data in Jquery Datatables</title>
+           <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css" />
+           <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+           <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+           <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/r/bs-3.3.5/jq-2.1.4,dt-1.10.8/datatables.min.css"/>
+           <script type="text/javascript" src="https://cdn.datatables.net/r/bs-3.3.5/jqc-1.11.3,dt-1.10.8/datatables.min.js"></script>
+      </head>
+      <body>
+           <br /><br />
+           <center><h1>Report Logs</h1></center>
+
+<div class="container">
+  <div class="panel">
+    <!--<center><button id="loadData" class="btn btn-default">Load Data</button></center>-->
+    <br /><br />
+    <table id="example" class="display" cellspacing="0" width="100%">
+      <thead>
+        <tr>
+            <th>Time Stamp</th>
+            <th>Robot Coordinates</th>
+            <th>Threat Directions</th>
+            <th>Emotions Present</th>
+            <th>Gunshots</th>
+            <th>Objects Of Interest</th>
+            <th>More Details</th>
+        </tr>
+      </thead>
     </table>
-<script>
+  </div>
+</div>
+      </body>
+ </html>
+ <script>
+$(function() {
+  $("#example").DataTable();
 
-<!--$.ajax({-->
-    <!--type: "GET"-->
-    <!--url: "/"-->
-    <!--})-->
+  // Premade test data, you can also use your own
+  <!--var testDataUrl = "https://raw.githubusercontent.com/chennighan/RapidlyPrototypeJavaScript/master/lesson4/data.json"-->
+  <!--var testDataUrl = "https://api.myjson.com/bins/1ghcd9"-->
+   var testDataUrl = "http://127.0.0.1:5000/index_get_data"
 
-var data = [{
-            "Time Stamp": "12:10:17",
-            "Robot Coordinates": "blahblah",
-            "Threat Direction": "blahblahblah",
-            "Emotions Present": "Fear",
-            "Gunshots": "Detected",
-            "Objects Of Interest": "Handgun: - <p/> Hat: - <p/> Jacket: - <p/> Knife: - <p/> Person: 2 <p/> Rifle: - <p/> Sunglasses: - <p/> Police: -",
-            "More Details": "www.google.com.sg"
-        },
-        {
-            "Time Stamp": "12:05:17",
-            "Robot Coordinates": "blahblah",
-            "Threat Direction": "blahblahblah",
-            "Emotions Present": "Anger",
-            "Gunshots": "Detected",
-            "Objects Of Interest": "Handgun: - <p/> Hat: - <p/> Jacket: - <p/> Knife: - <p/> Person: 2 <p/> Rifle: 2 <p/> Sunglasses: - <p/> Police: -",
-            "More Details": "www.google.com.sg"
-        }
-    ]
+  $("#loadData").click(function() {
+    loadData();
+  });
 
-
-function setupData() {
-    $(document).ready(function () {
-        var updateTable = $('#example').DataTable({
-            <!--"ajax": {-->
-                <!--// "url": "static/objects2.txt", // This works for the static file-->
-                <!--&lt;!&ndash;"type": "GET",&ndash;&gt;-->
-                <!--"url": "http://127.0.0.1:5000/index_get_data",-->
-                <!--"dataType": "json",-->
-                <!--"dataSrc": "data",-->
-                <!--"contentType":"application/json"-->
-            <!--},-->
-            "columns": [
-                {"data": "Time Stamp"},
-                {"data": "Robot Coordinates"},
-                {"data": "Emotions Present"},
-                {"data": "Gunshots"},
-                {"data": "Objects Of Interest"},
-                {"data": "More Details"}
-            ]
-        });
-        $("#btnUpdate").click(function(){
-        <!--updateTable.fnReloadAjax();-->
-            updateTable.ajax.reload();
-        });
+setInterval( function () {
+        $.ajax({
+      type: 'GET',
+      url: testDataUrl,
+      contentType: "text/plain",
+      dataType: 'json',
+      success: function (data) {
+        myJsonData = data;
+        console.log(myJsonData);
+        populateDataTable(myJsonData);
+      },
+      error: function (e) {
+        console.log("There was an error with your request...");
+        console.log("error: " + JSON.stringify(e));
+      }
     });
+}, 3000 );
 
+  // populate the data table with JSON data
+  function populateDataTable(data) {
+    console.log("populating data table...");
+    // clear the table before populating it with more data
+    $("#example").DataTable().clear();
+    var length = Object.keys(data.data).length;
+    for(var i = 1; i < length+1; i++) {
+      var customer = data.data['logs'+i];
 
-}
-<!--setInterval( function () {-->
-    <!--example_table.ajax.reload(); // user paging is not reset on reload-->
-<!--}, 30000 );-->
+      // You could also use an ajax property on the data table initialization
+      $('#example').dataTable().fnAddData( [
+        customer.Time_Stamp,
+        customer.Robot_Coordinates,
+        customer.Threat_Direction,
+        customer.Emotions_Present,
+        customer.Gunshots,
+        customer.Objects_Of_Interest,
+        customer.More_Details
+      ]);
+    }
+  }
+})();
 
-$( window ).on( "load", setupData );
-</script>
- </div>
-</body>
-</html>
+ </script>
