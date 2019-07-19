@@ -192,7 +192,7 @@ def diag(box_1):
     return dist1
 
 def expected_len(box_1, depth):
-    dist = ((depth*math.tan(((box_1["xmax"] - box_1["xmin"])*0.06796)))**2 + (depth*math.tan(((box_1["ymax"] - box_1["ymin"])*0.0806)))**2)**0.5
+    dist = ((depth*math.tan( math.radians((box_1["xmax"] - box_1["xmin"])*0.06796)) )**2 + (depth*math.tan( math.radians((box_1["ymax"] - box_1["ymin"])*0.0806)))**2)**0.5
     return dist
 
 def main():
@@ -201,7 +201,7 @@ def main():
 
     #PARAMS
     HOST = "127.0.0.1"
-    PORT = 4445
+    PORT = 4444
 
     device = 'GPU'	#GPU
     labels = './custom.names' #set to None if no labels
@@ -345,8 +345,7 @@ def main():
             # Validation bbox of detected object
             if obj['xmax'] > origin_im_size[1] or obj['ymax'] > origin_im_size[0] or obj['xmin'] < 0 or obj['ymin'] < 0:
                 continue
-            color = (int(min(obj['class_id'] * 10, 255)),
-                     min(obj['class_id'] * 2, 255), min(obj['class_id'] * 2, 255))
+            color = (0, 255, 255)
             det_label = labels_map[obj['class_id']] if labels_map and len(labels_map) >= obj['class_id'] else \
                 str(obj['class_id'])
 
@@ -354,6 +353,7 @@ def main():
             detection = {}
             detection["label"] = det_label
             detection["box"] = obj
+            detection["depth"] = d[int((obj["ymax"]+obj["ymin"])/2)][int((obj["xmax"] + obj["xmin"])/2)]/1000
 
 
   #          cv2.circle(frame, ( int(coords[0]), int(coords[1])), 5, (0,255,0), -1)
@@ -389,6 +389,7 @@ def main():
     #            detection["depth"] = -1
 
        #     detection["depth"] = estdist
+            labels_to_save = set(["Face", "Rifle", "Handgun", "Knife"])
 
             if detection["label"] == "Person":
                 detection["equip"] = []
@@ -396,41 +397,50 @@ def main():
                 detection["depth"] = d[int((obj["ymax"]+obj["ymin"])/2)][int((obj["xmax"] + obj["xmin"])/2)]/1000
                 people.append(detection)
             else:
-#                if detection["label"] == "Face":
- #                   detection["image"] = original_image[obj["ymin"]:obj["ymax"],obj["xmin"]:obj["xmax"]][...,::-1]
- #                   img = Image.fromarray(detection["image"])
-  #                  img.save("example.png")
-   #                 data = np.log(np.stack([d[(obj["ymin"]-10):(obj["ymax"]+10),(obj["xmin"]-10):(obj["xmax"]+10)]/1000 for i in range(3)], axis = 2) + 1)
-    #                data = data / data.max()
-     #               data = 255 * data
-      #              depth = data.astype(np.uint8)
-       #             depthimg = Image.fromarray(depth)
-        #            depthimg.save("exampled.png")
+                if detection["label"] in labels_to_save:
+                    detection["image"] = original_image[obj["ymin"]-30:obj["ymax"]+30,obj["xmin"]-30:obj["xmax"]+30][...,::-1]
+                    
+               
+                    img = Image.fromarray(detection["image"])
+                    img.save("example.png")
+                    data = np.log(np.stack([d[(obj["ymin"]-30):(obj["ymax"]+30),(obj["xmin"]-30):(obj["xmax"] +30)]/1000 for i in range(3)], axis = 2) + 1)
+                    np.set_printoptions(threshold=sys.maxsize)
+                    print(d[(obj["ymin"]-10):(obj["ymax"]+10),(obj["xmin"]-10):(obj["xmax"]+10)]/1000)
+                    data = data / data.max()
+                    data = 255 * data
+                    depth = data.astype(np.uint8)
+                    depthimg = Image.fromarray(depth)
+                    depthimg.save("exampled.png")
                     
                 others.append(detection)
                 cv2.rectangle(frame, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), color, 2)
                 cv2.putText(frame,
-                        "#" + det_label + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %' + ' ' ,
+                        "#" + det_label + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %' + ' ' + str(detection["depth"]),
       (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
             
             #print(det_label + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %' + ' ' + str(detection["depth"]) + " m")
-        object_len = {"Handgun": 0.2, "Hat": 0.2, "Jacket": 0.8 ,"Knife" :0.1, "Rifle": 0.8, "Sunglasses": 0.05, "Police": 1.7 , "Face" :0.2}
+        object_len = {"Handgun": 0.2, "Hat": 0.2, "Jacket": 0.8 ,"Knife" :0.1, "Rifle": 0.7, "Sunglasses": 0.05, "Police": 1.7 , "Face" :0.2}
 
         danger_weights = {"Handgun": 5, "Hat": 1, "Jacket": 1 ,"Knife" :3, "Person": 0 ,"Rifle": 5, "Sunglasses": 1, "Police": -6 , "Face" :0}
 
         for i in others:
             min_diff = 10000000000
+            count = 0
             likely = -1
             for j in range(len(people)):
                 if intersection_over_union(i["box"], people[j]["box"]) > 0:
-                     if people[j]["depth"] != 0:
-                         est_diff = (expected_len(i["box"], people[j]["depth"]) - object_len[i["label"]])**2
-                         if min_diff > est_diff:
-                             min_diff = est_diff
-                             likely = j
-             
-            people[likely]["equip"].append(i)
-            people[likely]["danger_score"] = people[likely]["danger_score"] + i["box"]["confidence"] * danger_weights[i["label"]]
+                    est_diff = (expected_len(i["box"], people[j]["depth"]) - object_len[i["label"]])**2
+                    print(i["label"], est_diff, expected_len(i["box"], people[j]["depth"]) - object_len[i["label"]])
+                    if people[j]["depth"] != 0:
+                        if min_diff > est_diff and est_diff < 15:
+                            min_diff = est_diff
+                            likely = j
+                    if count < 1 and est_diff < 16:
+                        likely = j
+                    count = count +1
+            if likely != -1:
+                people[likely]["equip"].append(i)
+                people[likely]["danger_score"] = people[likely]["danger_score"] + i["box"]["confidence"] * danger_weights[i["label"]]
 
         for i in people:
             if i["danger_score"] > 1:

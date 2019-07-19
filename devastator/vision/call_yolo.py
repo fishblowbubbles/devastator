@@ -10,6 +10,7 @@ import numpy as np
 import cv2
 import socket
 import pickle
+import math
 from openvino.inference_engine import IENetwork, IEPlugin
 from robot.helpers import recv_obj
 
@@ -169,16 +170,46 @@ def corners2center(xmin,xmax,ymin,ymax):
     w = xmax - xmin
     return x, y, w, h
 
-#### use the recv_obj func from robot.helpers instead
-# def recv_object(client):
-#     packets = []
-#     while True:
-#         packet = client.recv(1024)
-#         if not packet:
-#             break
-#         packets.append(packet)
-#     object = pickle.loads(b"".join(packets))
-#     return object
+def recv_object(client):
+    packets = []
+    while True:
+        packet = client.recv(1024)
+        if not packet:
+            break
+        packets.append(packet)
+    object = pickle.loads(b"".join(packets))
+    return object
+
+def diag(box_1):
+    dist1 = ((box_1["xmax"] - box_1["xmin"])**2 + (box_1["ymax"] - box_1["ymin"])**2)**0.5
+    return dist1
+
+def expected_len(box_1, depth):
+    dist = ((depth*math.tan( math.radians((box_1["xmax"] - box_1["xmin"])*0.06796)) )**2 + (depth*math.tan( math.radians((box_1["ymax"] - box_1["ymin"])*0.0806)))**2)**0.5
+    return dist
+
+def prettyprint(detections):
+    string = "[\n"
+    for i in detections:
+        string = string + "    {\n"
+        for person_k, person_v in i.items():
+
+            if person_k == "box" or person_k == "equip":
+                if person_k == "box":
+                    person_v = [person_v]
+                string = string + "        [\n"
+                for j in person_v:
+                    string = string + "            {\n"
+                    #print(j)
+                    for item_k, item_v in j.items():
+                        string = string + "                " + item_k + ": " + str(item_v) + "\n"
+                    string = string + "            },\n"
+                string = string + "        ]\n"
+            else:
+                string = string + "        " + person_k + ": " + str(person_v) + "\n"
+        string = string + "    },\n"
+    string = string + "]"
+    print(string)
 
 def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_given = False):
     if depth_given:
@@ -225,6 +256,7 @@ def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_give
         # Drawing objects with respect to the --prob_threshold CLI parameter
     objects = [obj for obj in objects if obj['confidence'] >= prob_thresh]
 
+    original_image = frame
     origin_im_size = frame.shape[:-1]
     people = []
     others = []
@@ -240,16 +272,43 @@ def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_give
 
         detection = {}
         detection["label"] = det_label
-        detection["confidence"] = round(obj['confidence'], 2)
-        detection["coordinates"] = corners2center(obj['xmin'],obj['xmax'],obj['ymin'],obj['ymax'])
-        if depth_given:
-            detection["depth"] = depth[int(detection["coordinates"][1])][int(detection["coordinates"][1])]/1000
+        detection["box"] = obj
+        #if depth_given:
+         #   detection["depth"] = depth[int(detection["coordinates"][1])][int(detection["coordinates"][0])]/1000
+
         if detection["label"] == "Person":
+            detection["equip"] = []
+            detection["danger_score"] = 0
+            detection["depth"] = d[int((obj["ymax"]+obj["ymin"])/2)][int((obj["xmax"] + obj["xmin"])/2)]/1000
             people.append(detection)
         else:
             others.append(detection)
 
-        print(detection["label"], str(detection["confidence"]), detection["coordinates"], detection["depth"] )
+
+    object_len = {"Handgun": 0.2, "Hat": 0.2, "Jacket": 0.8 ,"K nife" :0.1, "Rifle": 0.7, "Sunglasses": 0.05, "Police": 1.7 , "Face" :0.2}
+
+    danger_weights = {"Handgun": 5, "Hat": 1, "Jacket": 1 ,"Knife" :3, "Person": 0 ,"Rifle": 5, "Sunglasses": 1, "Police": -6 , "Face" :0}
+
+    for i in others:
+        min_diff = 10000000000
+        count = 0
+        likely = -1
+        for j in range(len(people)):
+            if intersection_over_union(i["box"], people[j]["box"]) > 0:
+                est_diff = (expected_len(i["box"], people[j]["depth"]) - object_len[i["label"]])**2
+                print(i["label"], est_diff, expected_len(i["box"], people[j]["depth"]) - object_len[i["label"]])
+                if people[j]["depth"] != 0:
+                    if min_diff > est_diff and est_diff < 15:
+                        min_diff = est_diff
+                        likely = j
+                if count < 1 and est_diff < 16:
+                    likely = j
+                count = count +1
+        if likely != -1:
+            people[likely]["equip"].append(i)
+            people[likely]["danger_score"] = people[likely]["danger_score"] + i["box"]["confidence"] * danger_weights[i["label"]]
+
+    return people
 
 def get_frame(input_stream, HOST=None, PORT=None):
     if input_stream == "cam":
@@ -272,7 +331,7 @@ def main():
 
     #PARAMS
     HOST = "127.0.0.1"
-    PORT = 4444
+    PORT = 4445
 
     device = 'CPU'	#GPU
     labels = './custom.names' #set to None if no labels
@@ -289,11 +348,17 @@ def main():
         labels_map = [x.strip() for x in f]
 
     frame = get_frame(args.input, HOST, PORT)
+<<<<<<< HEAD
 
     detection = detect(frame, net, exec_net, labels_map, args.prob_threshold,  args.iou_threshold, depth_given = True)
 
     return frame, detection #to get frame and detection vars
 
+=======
+
+    prettyprint(detect(frame, net, exec_net, labels_map, args.prob_threshold,  args.iou_threshold, depth_given = True))
+
+>>>>>>> a0f44de... aligned realsense depth with color and updated call_yolo functions
 
 
 if __name__ == '__main__':
