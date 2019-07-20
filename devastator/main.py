@@ -3,7 +3,7 @@ import os
 import sys
 import time
 from multiprocessing import Process
-
+import json
 import cv2
 
 import robot.realsense as realsense
@@ -100,9 +100,27 @@ if __name__ == "__main__":
 
         ###format the data for objects of interest to parse into report ui app
         StoreArgs.obj_of_interest = "Handgun: " + str(StoreArgs.handgun_count) + "  <p/> " + "Jacket: " + str(StoreArgs.jacket_count) + " <p/> " + "Knife: " + str(StoreArgs.knife_count) + " <p/> " + "Person: " + str(StoreArgs.person_count) + " <p/> " + "Rifle " + str(rifle_count) + " <p/> " + "Sunglasses: " + str(StoreArgs.sunglass_count) + " <p/> " + "Police: " + str(StoreArgs.police_count) + " <p/> "
-        new_json_info = 
+        # new_json_info =  to append to current obj_of_interest?
+        for keys in StoreArgs.json_info['data']:
+            keys = keys
+            StoreArgs.new_key = int(keys) + 1
 
+        #take the latest new_key from above
+        new_data = {
+            str(StoreArgs.new_key): {
+                "Time_Stamp": "12:12:17",
+                "Robot_Coordinates": "x,y,z",
+                "Threat_Direction": "x,y,z",
+                "Emotions_Present": "Anger,Fear",
+                "Gunshots": "Detected",
+                "Objects_Of_Interest": StoreAgs.obj_of_interest,
+                "More_Details": "<a href= www.google.com.sg>www.viewmorehere.com  </a>"
+            }
+        }
+        StoreArgs.json_info['data'].update(new_data) #updates the json
 
+        with open('../app/logs2.json', 'w') as outfile:
+            json.dump(StoreArgs.json_info, outfile, indent=4) #update the json file in app folder #for report logs ui
 
 
 

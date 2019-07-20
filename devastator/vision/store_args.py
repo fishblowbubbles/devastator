@@ -1,7 +1,7 @@
 #might not need this? but just leave here first
 
 import os
-
+import json
 # INPUT_STREAM = "cam"
 # HOST = "localhost" #host and port of mini_map_new.py
 # # PORT = 8898 #host and port of mini_map_new.py
@@ -25,19 +25,25 @@ SUN_GLASSES_COUNT = 0
 PERSON_COUNT = 0
 POLICE_COUNT = 0
 OBJ_OF_INTEREST = ""
-JSON_INFO = {
-    "data": {
-        "logs1": {
-            "Time_Stamp": "12:10:17",
-            "Robot_Coordinates": "x,y,z",
-            "Threat_Direction": "x,y,z",
-            "Emotions_Present": "Fear",
-            "Gunshots": "Detected",
-            "Objects_Of_Interest": OBJ_OF_INTEREST,
-            "More_Details": "<a href= www.google.com.sg>www.viewmorehere.com  </a>"
-        }
-    }
-}
+NEW_KEY = 0 #for the json format numbering
+
+JSON_INFO = json.load(open('../app/logs2.json'))
+
+# JSON_INFO = {
+#     "data": {
+#         "0": {
+#             "Time_Stamp": "example",
+#             "Robot_Coordinates": "example",
+#             "Threat_Direction": "example",
+#             "Emotions_Present": "example",
+#             "Gunshots": "example",
+#             "Objects_Of_Interest": OBJ_OF_INTEREST,
+#             "More_Details": "<a href= www.google.com.sg>www.viewmorehere.com  </a>"
+#         }
+#     }
+# }
+
+
 
 
 #----------------------- detection ------------------------
@@ -69,7 +75,8 @@ class StoreArgs:
                  police_count=POLICE_COUNT,
                  knife_count=KNIFE_COUNT,
                  obj_of_interest=OBJ_OF_INTEREST,
-                 json_info=JSON_INFO
+                 json_info=JSON_INFO,
+                 new_key=NEW_KEY
 
                  ):
         # self.input_stream = input_stream
@@ -95,4 +102,4 @@ class StoreArgs:
         self.sunglass_count = sunglass_count
         self.obj_of_interest = obj_of_interest
         self.json_info = json_info
-
+        self.new_key = new_key
