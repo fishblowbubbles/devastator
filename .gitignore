@@ -14,3 +14,4 @@ devastator/sound/vokaturi/__pycache__
 devastator/vision/__pycache__
 devastator/vision/darknet/__pycache__/
 *.xml
+*.xml
