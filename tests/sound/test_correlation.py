@@ -20,7 +20,7 @@ if __name__ == "__main__":
         gunshot_livestream()
     elif args.filename:
         _, samples = wavfile.read(args.filename)
-        gunshot = gunshot_detect(samples)
+        gunshot = gunshot_detect(samples[:, 0])
     else:
         samples = get_data(respeaker.HOST, respeaker.PORT)
-        gunshot = gunshot_detect(samples)
+        gunshot = gunshot_detect(samples[:, 0])

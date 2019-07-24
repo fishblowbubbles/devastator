@@ -14,7 +14,7 @@ EMOTIONS = {0: "Neutral", 1: "Happy", 2: "Sad", 3: "Anger", 4: "Fear"}
 
 GUNSHOT_THRESHOLD = 0.05
 _, GUNSHOT_TEMPLATE = wavfile.read("devastator/sound/data/normalized_template.wav")
-TEMPLATE_LENGTH, INTERVAL = 163840, 2000
+GUNSHOT_TEMPLATE_LENGTH, INTERVAL = 163840, 2000
 
 
 def normalize(data):
@@ -25,12 +25,13 @@ def normalize(data):
     return output
 
 
-def gunshot_detect(samples, template=GUNSHOT_TEMPLATE, threshold=GUNSHOT_THRESHOLD, interval=INTERVAL):
-    samples = normalize(samples[:TEMPLATE_LENGTH])
+def gunshot_detect(samples, template=GUNSHOT_TEMPLATE,
+                   threshold=GUNSHOT_THRESHOLD, interval=INTERVAL):
+    samples = normalize(samples[:len(template)])
     correlation = signal.correlate(samples, template, mode="same")
     correlation = max_filter(correlation, interval)
     correlation = np.amax(correlation)
-    gunshot = correlation > threshold
+    gunshot = correlation < threshold
     return gunshot
 
 
@@ -40,8 +41,8 @@ def gunshot_livestream():
         gunshot = gunshot_detect(samples[:, 0])
         direction = respeaker.api.direction
         if gunshot:
-            print("\rGunshots: {}\tDirection: {:10}"
-                  .format(gunshot, direction), end="")
+            print("Gunshot(s): {}\tDirection: {:10}"
+                  .format(gunshot, direction))
 
 
 def vokaturi_func(filename):
@@ -91,4 +92,4 @@ def emotion_livestream(rate=respeaker.RATE, filename=".tmp/audio.wav", ):
         if voice:
             emotion, confidence = emotion_detect(samples[:, 0], rate, filename)
             print("Emotion: {:10}\tConfidence: {:10.2}\tDirection: {:10}"
-                  .format(emotion, confidence, direction), end="")
+                  .format(emotion, confidence, direction))

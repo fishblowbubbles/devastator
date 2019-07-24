@@ -8,7 +8,7 @@ import pyrealsense2 as rs
 from robot.helpers import recv_obj, send_data
 
 HOST = "localhost"
-PORT = 4444
+PORT = 5555
 
 
 class D435i():
@@ -28,22 +28,23 @@ class D435i():
         return rgbd
 
     def _process_requests(self, frames):
+        if self.requests.empty():
+            return
         rgbd = self._frames_to_rgbd(frames)
         while not self.requests.empty():
             connection = self.requests.get()
             send_data(connection, rgbd)
 
     def _start_server(self):
-        server = socket.socket()
-        server.bind((self.host, self.port))
-        try:
+        with socket.socket() as server:
+            server.bind((self.host, self.port))
             server.listen()
-            while True:
-                connection, _ = server.accept()
-                self.requests.put(connection)
-        finally:
-            server.shutdown(socket.SHUT_RDWR)
-            server.close()
+            try:
+                while True:
+                    connection, _ = server.accept()
+                    self.requests.put(connection)
+            finally:
+                server.shutdown(socket.SHUT_RDWR)
 
     def run(self):
         server = Process(target=self._start_server)
