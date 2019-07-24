@@ -186,14 +186,14 @@ def recv_object(client):
 
 def get_frame(input_stream, HOST=None, PORT=None):
     if input_stream == "cam":
-        input_stream = 0
+        input_stream = 0 
         cap = cv2.VideoCapture(input_stream)
         ret, frame = cap.read()
     elif input_stream == "server":
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
             client.connect((HOST, PORT))
             frame = recv_obj(client)
-        # RGBD
+        #RGBD
     else:
         input_stream
         cap = cv2.VideoCapture(input_stream)
@@ -331,25 +331,7 @@ def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_give
             people[likely]["equip"].append(i)
             people[likely]["danger_score"] = people[likely]["danger_score"] + i["box"]["confidence"] * danger_weights[
                 i["label"]]
-
-    return people
-
-
-def get_frame(input_stream, HOST=None, PORT=None):
-    if input_stream == "cam":
-        input_stream = 0
-        cap = cv2.VideoCapture(input_stream)
-        ret, frame = cap.read()
-    elif input_stream == "server":
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
-            client.connect((HOST, PORT))
-            frame = recv_obj(client)
-        # RGBD
-    else:
-        input_stream
-        cap = cv2.VideoCapture(input_stream)
-        ret, frame = cap.read()
-    return frame
+    return people, datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
 def main():

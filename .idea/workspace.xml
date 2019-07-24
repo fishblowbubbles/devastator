@@ -58,8 +58,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/devastator/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1719">
-              <caret line="145" selection-start-line="145" selection-end-line="145" />
+            <state relative-caret-position="-1144">
+              <caret line="62" column="23" selection-start-line="62" selection-start-column="23" selection-end-line="62" selection-end-column="23" />
               <folding>
                 <element signature="e#0#15#0" expanded="true" />
               </folding>
@@ -70,8 +70,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/devastator/vision/call_yolo.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="596">
-              <caret line="385" lean-forward="true" selection-start-line="385" selection-end-line="385" />
+            <state relative-caret-position="511">
+              <caret line="366" column="25" selection-start-line="366" selection-start-column="24" selection-end-line="366" selection-end-column="25" />
             </state>
           </provider>
         </entry>
@@ -155,11 +155,13 @@
       <find>prob_thres</find>
       <find>get_fram</find>
       <find>plugin</find>
-      <find>get_frame</find>
       <find>HOST</find>
       <find>equip</find>
       <find>others</find>
       <find>rifle</find>
+      <find>get_frame</find>
+      <find>people</find>
+      <find>datetime</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -385,13 +387,6 @@
     <entry file="file://$PROJECT_DIR$/devastator/vision/helpers.py">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
-    <entry file="file://$PROJECT_DIR$/devastator/vision/call_yolo.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="596">
-          <caret line="385" lean-forward="true" selection-start-line="385" selection-end-line="385" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/devastator/vision/call_yolo_display.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="187">
@@ -455,11 +450,18 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/devastator/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1719">
-          <caret line="145" selection-start-line="145" selection-end-line="145" />
+        <state relative-caret-position="-1144">
+          <caret line="62" column="23" selection-start-line="62" selection-start-column="23" selection-end-line="62" selection-end-column="23" />
           <folding>
             <element signature="e#0#15#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/devastator/vision/call_yolo.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="511">
+          <caret line="366" column="25" selection-start-line="366" selection-start-column="24" selection-end-line="366" selection-end-column="25" />
         </state>
       </provider>
     </entry>
