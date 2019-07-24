@@ -308,6 +308,7 @@ def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_give
             people[likely]["equip"].append(i)
             people[likely]["danger_score"] = people[likely]["danger_score"] + i["box"]["confidence"] * danger_weights[i["label"]]
 
+
     return people
 
 def get_frame(input_stream, HOST=None, PORT=None):

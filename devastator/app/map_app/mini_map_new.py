@@ -165,7 +165,7 @@ def run():
                     pause(500)
                     hideLabel(scan_label)
 
-                endWait()
+                # endWait()
 
                 # buttonClicked(override_button)
                 # for event in pygame.event.get():

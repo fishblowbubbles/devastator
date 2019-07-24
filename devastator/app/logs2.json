@@ -2,7 +2,6 @@
   "data": {
     "0": {
       "Time_Stamp": "example",
-      "Robot_Coordinates": "example",
       "Threat_Direction": "example",
       "Emotions_Present": "example",
       "Gunshots": "example",
@@ -11,7 +10,6 @@
     },
     "1": {
       "Time_Stamp": "12:05:17",
-      "Robot_Coordinates": "x,y,z",
       "Threat_Direction": "x,y,z",
       "Emotions_Present": "Anger",
       "Gunshots": "Detected",
