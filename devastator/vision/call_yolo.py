@@ -11,6 +11,7 @@ import cv2
 import socket
 import pickle
 import math
+from datetime import datetime
 from openvino.inference_engine import IENetwork, IEPlugin
 from robot.helpers import recv_obj
 
@@ -180,6 +181,22 @@ def recv_object(client):
     object = pickle.loads(b"".join(packets))
     return object
 
+def get_frame(input_stream, HOST=None, PORT=None):
+    if input_stream == "cam":
+        input_stream = 0 
+        cap = cv2.VideoCapture(input_stream)
+        ret, frame = cap.read()
+    elif input_stream == "server":
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
+            client.connect((HOST, PORT))
+            frame = recv_obj(client)
+        #RGBD
+    else:
+        input_stream
+        cap = cv2.VideoCapture(input_stream)
+        ret, frame = cap.read()
+    return frame
+
 def diag(box_1):
     dist1 = ((box_1["xmax"] - box_1["xmin"])**2 + (box_1["ymax"] - box_1["ymin"])**2)**0.5
     return dist1
@@ -280,6 +297,7 @@ def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_give
             detection["equip"] = []
             detection["danger_score"] = 0
             detection["depth"] = d[int((obj["ymax"]+obj["ymin"])/2)][int((obj["xmax"] + obj["xmin"])/2)]/1000
+            detection["h_angle"] = round((((obj["xmax"] + obj["xmin"])/2) - 640) * (87/1280),2)
             people.append(detection)
         else:
             others.append(detection)
@@ -308,7 +326,6 @@ def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_give
             people[likely]["equip"].append(i)
             people[likely]["danger_score"] = people[likely]["danger_score"] + i["box"]["confidence"] * danger_weights[i["label"]]
 
-
     return people
 
 def get_frame(input_stream, HOST=None, PORT=None):
@@ -325,7 +342,7 @@ def get_frame(input_stream, HOST=None, PORT=None):
         input_stream
         cap = cv2.VideoCapture(input_stream)
         ret, frame = cap.read()
-    return frame
+    return people, datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 def main():
     args = build_argparser().parse_args()
@@ -350,10 +367,10 @@ def main():
 
     frame = get_frame(args.input, HOST, PORT)
 
-    detection = detect(frame, net, exec_net, labels_map, args.prob_threshold,  args.iou_threshold, depth_given = True)
+    detections, time = detect(frame, net, exec_net, labels_map, args.prob_threshold,  args.iou_threshold, depth_given = True)
 
-    return frame, detection #to get frame and detection vars
-
+    prettyprint(detections)
+    
 
 
 if __name__ == '__main__':

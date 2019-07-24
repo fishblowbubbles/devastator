@@ -1,5 +1,6 @@
 import pickle
 import socket
+from collections import namedtuple
 
 import cv2
 import numpy as np
@@ -11,16 +12,19 @@ from vision.darknet import darknet
 INPUT_MAP = [[200, 10], [1080, 10], [1270, 710], [10, 710]]
 OUTPUT_MAP = [[0, 0], [1280, 0], [1280, 720], [0, 720]]
 RESOLUTION = (1280, 720)
-COLORS = [[31, 119, 180, 255] , [174, 199, 232, 255],
-          [255, 127, 14, 255] , [255, 187, 120, 255],
-          [44, 160, 44, 255]  , [152, 223, 138, 255],
-          [214, 39, 40, 255]  , [255, 152, 150, 255],
+COLORS = [[31 , 119, 180, 255], [174, 199, 232, 255],
+          [255, 127, 14 , 255], [255, 187, 120, 255],
+          [44 , 160, 44 , 255], [152, 223, 138, 255],
+          [214, 39 , 40 , 255], [255, 152, 150, 255],
           [148, 103, 189, 255], [197, 176, 213, 255],
-          [140, 86, 75, 255]  , [196, 156, 148, 255],
+          [140, 86 , 75 , 255], [196, 156, 148, 255],
           [227, 119, 194, 255], [247, 182, 210, 255],
           [127, 127, 127, 255], [199, 199, 199, 255],
-          [188, 189, 34, 255] , [219, 219, 141, 255],
-          [23, 190, 207, 255] , [158, 218, 229, 255]]
+          [188, 189, 34 , 255], [219, 219, 141, 255],
+          [23 , 190, 207, 255], [158, 218, 229, 255]]
+
+Detection = namedtuple("Detection",
+                       ("label", "confidence", "coords", "distance", "angle"))
 
 
 def load_names(path):
@@ -44,14 +48,6 @@ def split_rgbd(rgbd):
     rgb, depth = rgbd[:, :, :3].astype(np.uint8), rgbd[:, :, 3]
     rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
     return rgb, depth
-
-
-class Detection:
-    def __init__(self, label, confidence, coords, distance):
-        self.label = label
-        self.confidence = confidence
-        self.coords = coords
-        self.distance = distance
 
 
 def load_darknet():

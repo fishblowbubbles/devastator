@@ -12,7 +12,7 @@ from robot.helpers import recv_obj, send_data
 from robot.micarray import tuning
 
 HOST = "localhost"
-PORT = 7777
+PORT = 8888
 
 DEVICE_NAME = "ReSpeaker 4 Mic Array (UAC1.0)"
 
@@ -51,28 +51,29 @@ class ReSpeaker:
             message = "{} not found".format(device_name)
             raise Exception(message)
 
-    def _to_wav_array(self, samples, num_samples):
-        shape =  (num_samples * self.chunk_size, self.channels)
-        samples = np.reshape(samples, shape)
+    def _get_buffer(self):
+        shape =  (len(self.buffer) * self.chunk_size, self.channels)
+        samples = np.reshape(self.buffer, shape)
         return samples
 
     def _process_requests(self):
-        samples = self._to_wav_array(self.buffer, len(self.buffer))
+        if self.requests.empty():
+            return
+        samples = self._get_buffer()
         while not self.requests.empty():
             connection = self.requests.get()
             send_data(connection, samples)
 
     def _start_server(self):
-        server = socket.socket()
-        server.bind((self.host, self.port))
-        try:
+        with socket.socket() as server:
+            server.bind((self.host, self.port))
             server.listen()
-            while True:
-                connection, _ = server.accept()
-                self.requests.put(connection)
-        finally:
-            server.shutdown(socket.SHUT_RDWR)
-            server.close()
+            try:
+                while True:
+                    connection, _ = server.accept()
+                    self.requests.put(connection)
+            finally:
+                server.shutdown(socket.SHUT_RDWR)
 
     def get_sample(self):
         sample = self.stream.read(self.chunk_size, exception_on_overflow=False)
@@ -88,10 +89,7 @@ class ReSpeaker:
             while True:
                 sample = self.get_sample()
                 self.buffer.append(sample)
-                if self.requests.empty():
-                    continue
-                else:
-                    self._process_requests()
+                self._process_requests()
         finally:
             self.stream.stop_stream()
             self.stream.close()

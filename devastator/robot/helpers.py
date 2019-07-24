@@ -4,10 +4,10 @@ import socket
 import time
 
 
-def recv_obj(s):
+def recv_obj(connection):
     packets = []
     while True:
-        packet = s.recv(1024)
+        packet = connection.recv(1024)
         if not packet:
             break
         packets.append(packet)
