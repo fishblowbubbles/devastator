@@ -279,6 +279,7 @@ def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_give
             detection["equip"] = []
             detection["danger_score"] = 0
             detection["depth"] = d[int((obj["ymax"]+obj["ymin"])/2)][int((obj["xmax"] + obj["xmin"])/2)]/1000
+            detection["h_angle"] = round((((obj["xmax"] + obj["xmin"])/2) - 640) * (87/1280),2)
             people.append(detection)
         else:
             others.append(detection)
@@ -347,8 +348,10 @@ def main():
         labels_map = [x.strip() for x in f]
 
     frame = get_frame(args.input, HOST, PORT)
-  
-    prettyprint(detect(frame, net, exec_net, labels_map, args.prob_threshold,  args.iou_threshold, depth_given = True))
+
+    detections, time = detect(frame, net, exec_net, labels_map, args.prob_threshold,  args.iou_threshold, depth_given = True)
+
+    prettyprint(detections)
     
 
 
