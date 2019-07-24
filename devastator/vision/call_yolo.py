@@ -2,6 +2,7 @@ from __future__ import print_function, division
 
 import os
 import sys
+
 sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 from argparse import ArgumentParser, SUPPRESS
 from math import exp as exp
@@ -14,8 +15,6 @@ import math
 from datetime import datetime
 from openvino.inference_engine import IENetwork, IEPlugin
 from robot.helpers import recv_obj
-
-
 
 
 def build_argparser():
@@ -55,7 +54,6 @@ class YoloV3Params:
             self.anchor_offset = 2 * 0
         else:
             assert False, "Invalid output size. Only 13, 26 and 52 sizes are supported for output spatial dimensions"
-
 
 
 def entry_index(side, coord, classes, location, entry):
@@ -132,7 +130,9 @@ def intersection_over_union(box_1, box_2):
         return 0
     return area_of_overlap / area_of_union
 
-def load_model(device, labels, model_xml, model_bin, plugin_dir, cpu_extension = '/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so' ):
+
+def load_model(device, labels, model_xml, model_bin, plugin_dir,
+               cpu_extension='/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so'):
     # ------------- 1. Plugin initialization for specified device and load extensions library if specified ----------
     plugin = IEPlugin(device=device, plugin_dirs=plugin_dir)
     if 'CPU' in device:
@@ -147,16 +147,16 @@ def load_model(device, labels, model_xml, model_bin, plugin_dir, cpu_extension =
         not_supported_layers = [l for l in net.layers.keys() if l not in supported_layers]
         if len(not_supported_layers) != 0:
             print("Following layers are not supported by the plugin for specified device {}:\n {}".
-                      format(plugin.device, ', '.join(not_supported_layers)))
+                  format(plugin.device, ', '.join(not_supported_layers)))
             print("Please try to specify cpu extensions library path in sample's command line parameters using -l "
-                      "or --cpu_extension command line argument")
+                  "or --cpu_extension command line argument")
             sys.exit(1)
 
     assert len(net.inputs.keys()) == 1, "Sample supports only YOLO V3 based single input topologies"
     assert len(net.outputs) == 3, "Sample supports only YOLO V3 based triple output topologies"
 
     # ---------------------------------------------- 4. Preparing inputs -------------------------------------------
-    
+
     #  Defaulf batch_size is 1
     net.batch_size = 1
 
@@ -164,13 +164,15 @@ def load_model(device, labels, model_xml, model_bin, plugin_dir, cpu_extension =
 
     return net, plugin.load(network=net, num_requests=2)
 
-def corners2center(xmin,xmax,ymin,ymax):
-    x = (xmin+xmax)/2
-    y = (ymin+ymax)/2
+
+def corners2center(xmin, xmax, ymin, ymax):
+    x = (xmin + xmax) / 2
+    y = (ymin + ymax) / 2
     h = ymax - ymin
     w = xmax - xmin
     return x, y, w, h
-    
+
+
 def recv_object(client):
     packets = []
     while True:
@@ -181,43 +183,48 @@ def recv_object(client):
     object = pickle.loads(b"".join(packets))
     return object
 
+
 def get_frame(input_stream, HOST=None, PORT=None):
     if input_stream == "cam":
-        input_stream = 0 
+        input_stream = 0
         cap = cv2.VideoCapture(input_stream)
         ret, frame = cap.read()
     elif input_stream == "server":
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
             client.connect((HOST, PORT))
             frame = recv_obj(client)
-        #RGBD
+        # RGBD
     else:
         input_stream
         cap = cv2.VideoCapture(input_stream)
         ret, frame = cap.read()
     return frame
 
+
 def diag(box_1):
-    dist1 = ((box_1["xmax"] - box_1["xmin"])**2 + (box_1["ymax"] - box_1["ymin"])**2)**0.5
+    dist1 = ((box_1["xmax"] - box_1["xmin"]) ** 2 + (box_1["ymax"] - box_1["ymin"]) ** 2) ** 0.5
     return dist1
 
+
 def expected_len(box_1, depth):
-    dist = ((depth*math.tan( math.radians((box_1["xmax"] - box_1["xmin"])*0.06796)) )**2 + (depth*math.tan( math.radians((box_1["ymax"] - box_1["ymin"])*0.0806)))**2)**0.5
+    dist = ((depth * math.tan(math.radians((box_1["xmax"] - box_1["xmin"]) * 0.06796))) ** 2 + (
+                depth * math.tan(math.radians((box_1["ymax"] - box_1["ymin"]) * 0.0806))) ** 2) ** 0.5
     return dist
 
+
 def prettyprint(detections):
-    string = "[\n" 
+    string = "[\n"
     for i in detections:
         string = string + "    {\n"
         for person_k, person_v in i.items():
-           
+
             if person_k == "box" or person_k == "equip":
                 if person_k == "box":
                     person_v = [person_v]
-                string = string + "        [\n" 
+                string = string + "        [\n"
                 for j in person_v:
                     string = string + "            {\n"
-                    #print(j)
+                    # print(j)
                     for item_k, item_v in j.items():
                         string = string + "                " + item_k + ": " + str(item_v) + "\n"
                     string = string + "            },\n"
@@ -228,29 +235,28 @@ def prettyprint(detections):
     string = string + "]"
     print(string)
 
-def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_given = False):
+
+def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_given=False):
     if depth_given:
         rgb, d = frame[:, :, :3].astype(np.uint8), frame[:, :, 3]
         rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
         frame = np.array(rgb)
         depth = np.array(d)
         v_deg_per_pix = 42.5 / 720
-        h_deg_per_pix = 69.4/ 1280
+        h_deg_per_pix = 69.4 / 1280
 
     input_blob = next(iter(net.inputs))
     n, c, h, w = net.inputs[input_blob].shape
     request_id = 0
     in_frame = cv2.resize(frame, (w, h))
 
-
-        # resize input_frame to network size
+    # resize input_frame to network size
     in_frame = in_frame.transpose((2, 0, 1))  # Change data layout from HWC to CHW
     in_frame = in_frame.reshape((n, c, h, w))
 
-
     exec_net.start_async(request_id=request_id, inputs={input_blob: in_frame})
 
-        # Collecting object detection results
+    # Collecting object detection results
     objects = list()
     if exec_net.requests[request_id].wait(-1) == 0:
         output = exec_net.requests[request_id].outputs
@@ -258,9 +264,8 @@ def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_give
         for layer_name, out_blob in output.items():
             layer_params = YoloV3Params(net.layers[layer_name].params, out_blob.shape[2])
             objects += parse_yolo_region(out_blob, in_frame.shape[2:],
-                                             frame.shape[:-1], layer_params,
-                                             prob_thresh)
-
+                                         frame.shape[:-1], layer_params,
+                                         prob_thresh)
 
         # Filtering overlapping boxes with respect to the --iou_threshold CLI parameter
     for i in range(len(objects)):
@@ -282,30 +287,30 @@ def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_give
         if obj['xmax'] > origin_im_size[1] or obj['ymax'] > origin_im_size[0] or obj['xmin'] < 0 or obj['ymin'] < 0:
             continue
         color = (int(min(obj['class_id'] * 12.5, 255)),
-                     min(obj['class_id'] * 7, 255), min(obj['class_id'] * 5, 255))
+                 min(obj['class_id'] * 7, 255), min(obj['class_id'] * 5, 255))
         det_label = labels_map[obj['class_id']] if labels_map and len(labels_map) >= obj['class_id'] else \
             str(obj['class_id'])
-
 
         detection = {}
         detection["label"] = det_label
         detection["box"] = obj
-        #if depth_given:
-         #   detection["depth"] = depth[int(detection["coordinates"][1])][int(detection["coordinates"][0])]/1000
-        
+        # if depth_given:
+        #   detection["depth"] = depth[int(detection["coordinates"][1])][int(detection["coordinates"][0])]/1000
+
         if detection["label"] == "Person":
             detection["equip"] = []
             detection["danger_score"] = 0
-            detection["depth"] = d[int((obj["ymax"]+obj["ymin"])/2)][int((obj["xmax"] + obj["xmin"])/2)]/1000
-            detection["h_angle"] = round((((obj["xmax"] + obj["xmin"])/2) - 640) * (87/1280),2)
+            detection["depth"] = d[int((obj["ymax"] + obj["ymin"]) / 2)][int((obj["xmax"] + obj["xmin"]) / 2)] / 1000
+            detection["h_angle"] = round((((obj["xmax"] + obj["xmin"]) / 2) - 640) * (87 / 1280), 2)
             people.append(detection)
         else:
             others.append(detection)
-    
 
-    object_len = {"Handgun": 0.2, "Hat": 0.2, "Jacket": 0.8 ,"K nife" :0.1, "Rifle": 0.7, "Sunglasses": 0.05, "Police": 1.7 , "Face" :0.2}
+    object_len = {"Handgun": 0.2, "Hat": 0.2, "Jacket": 0.8, "K nife": 0.1, "Rifle": 0.7, "Sunglasses": 0.05,
+                  "Police": 1.7, "Face": 0.2}
 
-    danger_weights = {"Handgun": 5, "Hat": 1, "Jacket": 1 ,"Knife" :3, "Person": 0 ,"Rifle": 5, "Sunglasses": 1, "Police": -6 , "Face" :0}
+    danger_weights = {"Handgun": 5, "Hat": 1, "Jacket": 1, "Knife": 3, "Person": 0, "Rifle": 5, "Sunglasses": 1,
+                      "Police": -6, "Face": 0}
 
     for i in others:
         min_diff = 10000000000
@@ -313,7 +318,7 @@ def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_give
         likely = -1
         for j in range(len(people)):
             if intersection_over_union(i["box"], people[j]["box"]) > 0:
-                est_diff = (expected_len(i["box"], people[j]["depth"]) - object_len[i["label"]])**2
+                est_diff = (expected_len(i["box"], people[j]["depth"]) - object_len[i["label"]]) ** 2
                 print(i["label"], est_diff, expected_len(i["box"], people[j]["depth"]) - object_len[i["label"]])
                 if people[j]["depth"] != 0:
                     if min_diff > est_diff and est_diff < 15:
@@ -321,56 +326,59 @@ def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_give
                         likely = j
                 if count < 1 and est_diff < 16:
                     likely = j
-                count = count +1
+                count = count + 1
         if likely != -1:
             people[likely]["equip"].append(i)
-            people[likely]["danger_score"] = people[likely]["danger_score"] + i["box"]["confidence"] * danger_weights[i["label"]]
+            people[likely]["danger_score"] = people[likely]["danger_score"] + i["box"]["confidence"] * danger_weights[
+                i["label"]]
 
     return people
 
+
 def get_frame(input_stream, HOST=None, PORT=None):
     if input_stream == "cam":
-        input_stream = 0 
+        input_stream = 0
         cap = cv2.VideoCapture(input_stream)
         ret, frame = cap.read()
     elif input_stream == "server":
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
             client.connect((HOST, PORT))
             frame = recv_obj(client)
-        #RGBD
+        # RGBD
     else:
         input_stream
         cap = cv2.VideoCapture(input_stream)
         ret, frame = cap.read()
-    return people, datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    return frame
+
 
 def main():
     args = build_argparser().parse_args()
 
-    #PARAMS
+    # PARAMS
     HOST = "127.0.0.1"
     PORT = 4445
 
-    device = 'CPU'	#GPU
-    labels = './custom.names' #set to None if no labels
+    device = 'CPU'  # GPU
+    labels = './custom.names'  # set to None if no labels
     cpu_extension = '/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so'
     model_xml = './YoloV2_18000.xml'
     model_bin = os.path.splitext(model_xml)[0] + ".bin"
 
     # ------------------------------------------- Loading model to the plugin -------------------------------------
-    net, exec_net = load_model(device, labels, model_xml, model_bin, plugin_dir = None, cpu_extension = cpu_extension)
+    net, exec_net = load_model(device, labels, model_xml, model_bin, plugin_dir=None, cpu_extension=cpu_extension)
     print("Model loaded")
-    
-    #mapping labels
+
+    # mapping labels
     with open(labels, 'r') as f:
         labels_map = [x.strip() for x in f]
 
     frame = get_frame(args.input, HOST, PORT)
 
-    detections, time = detect(frame, net, exec_net, labels_map, args.prob_threshold,  args.iou_threshold, depth_given = True)
+    detections, time = detect(frame, net, exec_net, labels_map, args.prob_threshold, args.iou_threshold,
+                              depth_given=True)
 
     prettyprint(detections)
-    
 
 
 if __name__ == '__main__':
