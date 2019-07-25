@@ -12,5 +12,7 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=respeaker.PORT)
     args = parser.parse_args()
 
-    microphone = respeaker.ReSpeaker(seconds=args.seconds, host=args.host, port=args.port)
+    microphone = respeaker.ReSpeaker(seconds=args.seconds,
+                                     host=args.host,
+                                     port=args.port)
     microphone.run()

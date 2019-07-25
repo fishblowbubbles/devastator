@@ -12,5 +12,7 @@ if __name__ == "__main__":
     parser.add_argument("--target-port", type=int, default=romeo.PORT)
     args = parser.parse_args()
 
-    controller = xpad.XPad(args.target_host, args.target_port, args.device_name)
+    controller = xpad.XPad(target_host=args.target_host,
+                           target_port=args.target_port,
+                           device_name=args.device_name)
     controller.run()

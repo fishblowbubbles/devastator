@@ -7,6 +7,8 @@
 
 import ctypes
 
+EMOTIONS = {0: "Neutral", 1: "Happy", 2: "Sad", 3: "Anger", 4: "Fear"}
+
 
 class Quality(ctypes.Structure):
     _fields_ = [("valid", ctypes.c_int), ("num_frames_analyzed", ctypes.c_int),

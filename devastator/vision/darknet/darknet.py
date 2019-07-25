@@ -3,14 +3,6 @@ import os
 import random
 from ctypes import *
 
-PATH2WEIGHTS = "devastator/vision/darknet/backup/custom.weights"
-PATH2NAMES = "devastator/vision/darknet/data/custom.names"
-PATH2DATA = "devastator/vision/darknet/cfg/custom.data"
-PATH2CFG = "devastator/vision/darknet/cfg/custom.cfg"
-
-FPS = 24
-THRESH = 0.1
-
 
 def c_array(ctype, values):
     arr = (ctype * len(values))()
