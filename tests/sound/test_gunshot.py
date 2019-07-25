@@ -16,12 +16,14 @@ if __name__ == "__main__":
     parser.add_argument("--filename")
     args = parser.parse_args()
 
-    gunshot = Gunshot()
+    gunshot_detector = Gunshot()
     if args.listen:
-        gunshot.listen()
-    elif args.filename:
-        _, samples = wavfile.read(args.filename)
-        is_gunshot = gunshot.detect(samples[:, 0])
+        gunshot_detector.listen()
     else:
-        samples = get_data(respeaker.HOST, respeaker.PORT)
-        is_gunshot = gunshot.detect(samples[:, 0])
+        if args.filename:
+            _, samples = wavfile.read(args.filename)
+            is_gunshot = gunshot_detector.detect(samples[:, 0])
+        else:
+            samples = get_data(respeaker.HOST, respeaker.PORT)
+            is_gunshot = gunshot_detector.detect(samples[:, 0])
+        print("Gunshot(s)?: {}".format(is_gunshot))

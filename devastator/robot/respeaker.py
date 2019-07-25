@@ -17,15 +17,15 @@ PORT = 8888
 DEVICE_NAME = "ReSpeaker 4 Mic Array (UAC1.0)"
 
 RATE, CHANNELS, WIDTH = 16000, 6, 2
-BUFFER_SIZE_IN_SECONDS, CHUNK_SIZE = 5, 1024
+SECONDS, CHUNK_SIZE = 2, 1024
 
 api = tuning.find()
 
 
 class ReSpeaker:
-    def __init__(self, rate=RATE, channels=CHANNELS, width=WIDTH, chunk_size=CHUNK_SIZE,
-                 seconds=BUFFER_SIZE_IN_SECONDS, device_name=DEVICE_NAME,
-                 host=HOST, port=PORT):
+    def __init__(self, rate=RATE, channels=CHANNELS, width=WIDTH,
+                 seconds=SECONDS, chunk_size=CHUNK_SIZE,
+                 device_name=DEVICE_NAME, host=HOST, port=PORT):
         self.host, self.port = host, port
         self.audio = pyaudio.PyAudio()
 

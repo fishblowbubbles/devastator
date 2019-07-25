@@ -1,52 +1,22 @@
-import numpy as np
 import scipy.io.wavfile as wavfile
 
 from robot import respeaker
 from robot.helpers import get_data
-from sound.vokaturi import Vokaturi
+from sound.helpers import vokaturi_func
 
-
-def vokaturi_func(filename):
-    rate, samples = wavfile.read(filename)
-    buffer_length = len(samples)
-    c_buffer = Vokaturi.SampleArrayC(buffer_length)
-
-    if samples.ndim == 1:
-        c_buffer[:] = samples[:] / 32768.0
-    else:
-        c_buffer[:] = 0.5 * (samples[:, 0] + 0.0 + samples[:, 1]) / 32768.0
-
-    voice = Vokaturi.Voice(rate, buffer_length)
-    voice.fill(buffer_length, c_buffer)
-
-    quality = Vokaturi.Quality()
-    probabilities = Vokaturi.EmotionProbabilities()
-    voice.extract(quality, probabilities)
-
-    emotion, confidence = "-", 0.0
-
-    if quality.valid:
-        n = probabilities.neutrality
-        h = probabilities.happiness
-        s = probabilities.sadness
-        a = probabilities.anger
-        f = probabilities.fear
-
-        output = [n, h, s, a, f]
-        prediction = np.argmax(output)
-        emotion = Vokaturi.EMOTIONS[prediction]
-        confidence = output[prediction]
-
-    return emotion, confidence
+EMOTIONS = {"-": None, 0: "Neutral", 1: "Happy", 2: "Sad", 3: "Anger", 4: "Fear"}
+THRESHOLD = 0.95
 
 
 class Emotion:
-    def __init__(self, filename=".tmp/audio.wav"):
+    def __init__(self, emotions=EMOTIONS, filename=".tmp/audio.wav"):
+        self.emotions = emotions
         self.filename = filename
 
     def detect(self, samples, rate=respeaker.RATE):
         wavfile.write(self.filename, rate, samples)
-        emotion, confidence = vokaturi_func(self.filename)
+        prediction, confidence = vokaturi_func(self.filename)
+        emotion = self.emotions[prediction]
         return emotion, confidence
 
     def listen(self, rate=respeaker.RATE,
@@ -54,6 +24,7 @@ class Emotion:
         while True:
             samples = get_data(host, port)
             emotion, confidence = self.detect(samples[:, 0], rate)
-            if emotion != "-":
-                print("Emotion: {:10}\tConfidence: {:10.2}"
-                      .format(emotion, confidence))
+            if emotion:
+                direction = respeaker.api.direction
+                print("Emotion: {:10}\tConfidence: {:5.2}\tDirection: {:5}"
+                      .format(emotion, confidence, direction))

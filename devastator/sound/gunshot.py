@@ -11,29 +11,27 @@ _, TEMPLATE = wavfile.read("devastator/sound/data/normalized_template.wav")
 LENGTH, INTERVAL = 163840, 2000
 
 
-def rms(data):
-    output = (sum(data**2) / len(data))**0.5
-    return output
-
-
-def normalize(data):
-    output = data / max(data)
-    output = output * rms(output)
-    return output
-
-
 class Gunshot:
-    def __init__(self, template=TEMPLATE, threshold=THRESHOLD,
-                 length=LENGTH, interval=INTERVAL):
-        self.template, self.threshold = template, threshold
-        self.length, self.interval = length, interval
+    def __init__(self, template=TEMPLATE, length=LENGTH, interval=INTERVAL):
+        self.template = template
+        self.length = length
+        self.interval = interval
 
-    def detect(self, samples):
-        samples = normalize(samples[:self.length])
+    def _rms(self, data):
+        output = (sum(data**2) / len(data))**0.5
+        return output
+
+    def _normalize(self, data):
+        output = data / max(data)
+        output = output * self._rms(output)
+        return output
+
+    def detect(self, samples, threshold=THRESHOLD):
+        samples = self._normalize(samples[:self.length])
         correlation = signal.correlate(samples, self.template, mode="same")
         correlation = max_filter(correlation, self.interval)
         correlation = np.amax(correlation)
-        is_gunshot = correlation > self.threshold
+        is_gunshot = correlation < threshold
         return is_gunshot
 
     def listen(self, host=respeaker.HOST, port=respeaker.PORT):
@@ -41,4 +39,6 @@ class Gunshot:
             samples = get_data(host, port)
             is_gunshot = self.detect(samples[:, 0])
             if is_gunshot:
-                print("Gunshot(s)? {}".format(is_gunshot))
+                direction = respeaker.api.direction
+                print("Gunshot(s)! Direction: {}"
+                      .format(direction))

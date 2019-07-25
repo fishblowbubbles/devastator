@@ -12,9 +12,11 @@ if __name__ == "__main__":
     parser.add_argument("--listen", action="store_true")
     args = parser.parse_args()
 
-    emotion = Emotion()
+    emotion_detector = Emotion()
     if args.listen:
-        emotion.listen()
+        emotion_detector.listen()
     else:
         samples = get_data(respeaker.HOST, respeaker.PORT)
-        emotion.detect(samples[:, 0])
+        emotion, confidence =  emotion_detector.detect(samples[:, 0])
+        print("Emotion: {:10}\tConfidence: {:5.2}"
+              .format(emotion, confidence))
