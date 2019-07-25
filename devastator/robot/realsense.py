@@ -11,7 +11,7 @@ HOST = "localhost"
 PORT = 4444
 
 RESOLUTION = (1280, 720)
-FPS, FOV = 30, 87
+FPS, FOV = 30, 87.0
 
 
 class D435i():

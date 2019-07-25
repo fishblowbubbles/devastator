@@ -14,9 +14,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", action="store_true")
     parser.add_argument("--fps", type=int, default=realsense.FPS)
+    parser.add_argument("--resolution", type=tuple,
+                        default=realsense.RESOLUTION)
+    parser.add_argument("--fov", type=float, default=realsense.FOV)
     args = parser.parse_args()
 
-    tracker = Tracker()
+    tracker = Tracker(resolution=args.resolution, fov=args.fov)
     if args.video:
         livestream(tracker.detect, fps=args.fps)
     else:

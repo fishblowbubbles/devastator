@@ -14,14 +14,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", action="store_true")
     parser.add_argument("--fps", type=int, default=realsense.FPS)
-    parser.add_argument("--thresh", type=float, default=yolo.THRESH)
+    parser.add_argument("--threshold", type=float, default=yolo.THRESHOLD)
     args = parser.parse_args()
 
     darknet = yolo.Darknet()
     if args.video:
-        livestream(darknet.detect, fps=args.fps)
+        livestream(darknet.detect, fps=args.fps, threshold=args.threshold)
     else:
         frames = get_data(realsense.HOST, realsense.PORT)
         rgb, depth = split_rgbd(frames)
-        darknet.detect(rgb, depth, thresh=args.thresh)
+        darknet.detect(rgb, depth, threshold=args.threshold)
         cv2.waitKey(0)

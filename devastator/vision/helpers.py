@@ -3,6 +3,7 @@ import socket
 from collections import namedtuple
 
 import cv2
+import cv2.aruco as aruco
 import numpy as np
 
 from robot import realsense
@@ -51,59 +52,52 @@ def add_distances(detections, depth):
     for label, confidence, coords in detections:
         x, y, _, _ = coords
         distance = get_distance(x, y, depth)
-        detection = Detection(label.decode("utf-8"), confidence, coords, distance)
+        detection = Detection(label.decode("utf-8"), confidence,
+                              coords, distance)
         detections_with_distances.append(detection)
     return detections_with_distances
 
 
-def livestream(detect, fps=realsense.FPS):
+def livestream(detect, fps=realsense.FPS, **kwargs):
     delay = int(100 / fps)
     while True:
         rgbd = get_data(realsense.HOST, realsense.PORT)
         rgb, depth = split_rgbd(rgbd)
-        detect(rgb, depth, show=True)
+        detect(rgb, depth, show=True, **kwargs)
         if cv2.waitKey(delay) == ord("q"):
             break
     cv2.destroyAllWindows()
 
 
-class Annotator:
-    def __init__(self, path_to_names, colors=COLORS, font=FONT):
-        self.names = self._load_names(path_to_names)
-        self.colors, self.font = colors, font
+def load_names(path_to_names):
+    names = []
+    with open(path_to_names, "r") as file:
+        lines = file.read()
+        lines = lines.strip().split("\n")
+        for line in lines:
+            names.append(line)
+    return names
 
-    def _load_names(self, path_to_names):
-        names = []
-        with open(path_to_names, "r") as file:
-            lines = file.read()
-            lines = lines.strip().split("\n")
-            for line in lines:
-                names.append(line)
-        return names
 
-    def _add_detections(self, rgb, detections):
-        for detection in detections:
-            x, y, width, height = detection.coords
-            x1, y1, = int(x - width / 2), int(y - height / 2)
-            x2, y2 = int(x + width / 2), int(y + height / 2)
+def draw_detections(rgb, detections, names, colors=COLORS, font=FONT):
+    for detection in detections:
+        x, y, width, height = detection.coords
+        x1, y1, = int(x - width / 2), int(y - height / 2)
+        x2, y2 = int(x + width / 2), int(y + height / 2)
 
-            color = self.colors[self.names.index(detection.label)][:3]
-            s = "{} (Conf.: {}, Dist.: {} m)".format(detection.label,
-                                                    round(detection.confidence, 2),
-                                                    detection.distance)
+        color = colors[names.index(detection.label)][:3]
+        s = "{} (Conf.: {}, Dist.: {} m)".format(detection.label,
+                                                round(detection.confidence, 2),
+                                                detection.distance)
 
-            cv2.putText(rgb, s, (x1 + 5, y1 - 5), self.font, 0.5, color, 1)
-            cv2.rectangle(rgb, (x1, y1), (x2, y2), color, 2)
-            cv2.circle(rgb, (int(x), int(y)), 5, color, -1)
+        cv2.putText(rgb, s, (x1 + 5, y1 - 5), font, 0.5, color, 1)
+        cv2.rectangle(rgb, (x1, y1), (x2, y2), color, 2)
+        cv2.circle(rgb, (int(x), int(y)), 5, color, -1)
 
-    def _add_markers(self, rgb, markers):
-        for marker in markers:
-            x, y = int(marker["corners"][0][0][0]), int(marker["corners"][0][0][1]) - 7
-            s = "Dist.: {} m, Angle: {}".format(marker["distance"], marker["angle"])
-            cv2.putText(rgb, s, (x, y), self.font, 0.6, (0, 255, 0), 1)
 
-    def draw(self, rgb, detections=None, markers=None):
-        if detections:
-            self._add_detections(rgb, detections)
-        if markers:
-            self._add_markers(rgb, markers)
+def draw_markers(rgb, markers, corners, font=FONT):
+    for marker in markers:
+        x, y = int(marker["corners"][0][0][0]) + 5, int(marker["corners"][0][0][1]) - 5
+        s = "Dist.: {} m, Angle: {}".format(marker["distance"], marker["angle"])
+        cv2.putText(rgb, s, (x, y), font, 0.5, (0, 255, 0), 1)
+    aruco.drawDetectedMarkers(rgb, corners)
