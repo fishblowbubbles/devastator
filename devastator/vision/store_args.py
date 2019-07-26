@@ -29,7 +29,7 @@ NEW_KEY = 0 #for the json format numbering
 OBJ_DISTANCE = 0.0
 OBJ_ANGLE  = 0.0
 OBJ_DANGER_SCORE = 0
-OBJ_DETECTED = "PERSON"
+OBJ_DETECTED = ""
 ROBOT_ACTION = "Moving"
 
 JSON_INFO = json.load(open('../app/logs2.json'))
