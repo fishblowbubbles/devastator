@@ -192,7 +192,8 @@ class Romeo:
         return voltage
 
     def set_voltage(self, motor, voltage):
-        self.config.save("romeo", "{}voltage".format(("left", "right")[motor - 1]), voltage)
+        self.config.save("romeo", "{}voltage".format(("left", "right")[motor - 1]),
+                                                     voltage)
         print("{} Motor Voltage   = {}".format(("L", "R")[motor - 1], voltage))
         message = "motor{}_voltage {}".format(motor, voltage)
         self._send_serial(message)

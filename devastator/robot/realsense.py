@@ -8,11 +8,14 @@ import pyrealsense2 as rs
 from robot.helpers import recv_obj, send_data
 
 HOST = "localhost"
-PORT = 5555
+PORT = 4444
+
+RESOLUTION = (1280, 720)
+FPS, FOV = 30, 87.0
 
 
 class D435i():
-    def __init__(self, host, port):
+    def __init__(self, host=HOST, port=PORT):
         self.host, self.port = host, port
         self.requests = Queue()
 
@@ -28,8 +31,6 @@ class D435i():
         return rgbd
 
     def _process_requests(self, frames):
-        if self.requests.empty():
-            return
         rgbd = self._frames_to_rgbd(frames)
         while not self.requests.empty():
             connection = self.requests.get()
@@ -54,7 +55,8 @@ class D435i():
             while True:
                 frames = self.pipeline.wait_for_frames()
                 frames = self.align.process(frames)
-                self._process_requests(frames)
+                if not self.requests.empty():
+                    self._process_requests(frames)
         finally:
             self.pipeline.stop()
             server.terminate()

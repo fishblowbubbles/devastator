@@ -1,48 +1,7 @@
-import os
-import time
-
 import numpy as np
 import scipy.io.wavfile as wavfile
-from scipy import signal
-from scipy.ndimage.filters import maximum_filter1d as max_filter
 
-import robot.respeaker as respeaker
 from sound.vokaturi import Vokaturi
-from robot.helpers import get_data
-
-EMOTIONS = {0: "Neutral", 1: "Happy", 2: "Sad", 3: "Anger", 4: "Fear"}
-
-GUNSHOT_THRESHOLD = 0.05
-_, GUNSHOT_TEMPLATE = wavfile.read("devastator/sound/data/normalized_template.wav")
-GUNSHOT_TEMPLATE_LENGTH, INTERVAL = 163840, 2000
-
-
-def normalize(data):
-    def rms(d):
-        return (sum(d**2) / len(d))**0.5
-    output = data / max(data)
-    output = output * rms(output)
-    return output
-
-
-def gunshot_detect(samples, template=GUNSHOT_TEMPLATE,
-                   threshold=GUNSHOT_THRESHOLD, interval=INTERVAL):
-    samples = normalize(samples[:len(template)])
-    correlation = signal.correlate(samples, template, mode="same")
-    correlation = max_filter(correlation, interval)
-    correlation = np.amax(correlation)
-    gunshot = correlation < threshold
-    return gunshot
-
-
-def gunshot_livestream():
-    while True:
-        samples = get_data(respeaker.HOST, respeaker.PORT)
-        gunshot = gunshot_detect(samples[:, 0])
-        direction = respeaker.api.direction
-        if gunshot:
-            print("Gunshot(s): {}\tDirection: {:10}"
-                  .format(gunshot, direction))
 
 
 def vokaturi_func(filename):
@@ -62,7 +21,8 @@ def vokaturi_func(filename):
     probabilities = Vokaturi.EmotionProbabilities()
     voice.extract(quality, probabilities)
 
-    emotion, confidence = "-", 0.0
+    prediction, confidence = "-", 0
+
     if quality.valid:
         n = probabilities.neutrality
         h = probabilities.happiness
@@ -72,24 +32,6 @@ def vokaturi_func(filename):
 
         output = [n, h, s, a, f]
         prediction = np.argmax(output)
-        emotion = EMOTIONS[prediction]
         confidence = output[prediction]
 
-    return emotion, confidence
-
-
-def emotion_detect(samples, rate=respeaker.RATE, filename=".tmp/audio.wav"):
-    wavfile.write(filename, rate, samples)
-    emotion, confidence = vokaturi_func(filename)
-    return emotion, confidence
-
-
-def emotion_livestream(rate=respeaker.RATE, filename=".tmp/audio.wav", ):
-    while True:
-        samples = get_data(respeaker.HOST, respeaker.PORT)
-        direction = respeaker.api.direction
-        voice = respeaker.api.is_voice()
-        if voice:
-            emotion, confidence = emotion_detect(samples[:, 0], rate, filename)
-            print("Emotion: {:10}\tConfidence: {:10.2}\tDirection: {:10}"
-                  .format(emotion, confidence, direction))
+    return prediction, confidence

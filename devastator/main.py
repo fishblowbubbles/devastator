@@ -1,9 +1,9 @@
 import argparse
-import os
+import json
 import sys
 import time
 from multiprocessing import Process
-import json
+
 import cv2
 
 import robot.realsense as realsense
@@ -17,7 +17,7 @@ from robot.romeo import Romeo
 from robot.xpad import XPad
 from sound.helpers import emotion_detect, gunshot_detect, vokaturi_func
 from vision.call_yolo import detect, get_frame, load_model, main
-from vision.store_args import *
+from vision.store_args import StoreArgs
 from vision.Aruco_Tracker.aruco_tracker import *
 
 if __name__ == "__main__":
@@ -27,26 +27,37 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.robot:
-        devices = {# "RealSense": realsense.D435i(),
-                   "Romeo": romeo.Romeo(),
-                   "ReSpeaker": respeaker.ReSpeaker()}
         with open(StoreArgs.labels, 'r') as f:
             labels_map = [x.strip() for x in f]
         net, exec_net = load_model(StoreArgs.device, StoreArgs.labels, StoreArgs.model_xml, StoreArgs.model_bin, StoreArgs.plugin_dir, StoreArgs.cpu_extension)
+        devices = {
+            "RealSense": realsense.D435i(),
+            "Romeo": romeo.Romeo(),
+            "ReSpeaker": respeaker.ReSpeaker()
+        }
+        # darknet, tracker = Darknet(), Tracker()
+        # emotion, gunshot = Emotion(), Gunshot()
     elif args.app:
-        devices = {"xpad": xpad.XPad()}
+        devices = {
+            # "App": app.App(),
+            "XPad": xpad.XPad()
+        }
     else:
+        parser.print_help()
         sys.exit()
 
     processes = {}
+
     for name, device in devices.items():
         processes[name] = Process(target=device.run)
+
     for name, process in processes.items():
         print("Starting {} ...".format(name))
         process.start()
 
-    # """
+
     time.sleep(5)
+
 
     try:
         while True:
@@ -63,7 +74,6 @@ if __name__ == "__main__":
                 emotion, confidence = emotion_detect(samples[:, 0])
                 print("Emotion: {:10}\tConfidence: {:10.2}\tDirection: {:10}"
                       .format(emotion, confidence, direction))
-
 ####-------------------------- Realsense integration with report ui ----------------------------
             frame = get_data(realsense.HOST, realsense.PORT)
             detection, timestamp = detect(frame, net, exec_net, StoreArgs.labels_map, StoreArgs.prob_threshold,
@@ -135,41 +145,7 @@ if __name__ == "__main__":
             with open('../app/logs2.json', 'w') as outfile:
                 json.dump(StoreArgs.json_info, outfile,
                           indent=4)  # update the json file in app folder #for report logs ui
-            
+
     finally:
         for name, process in processes.items():
             print("Stopping {}".format(name))
-            process.terminate()
-    # """
-
-### -----------------------------------------------aruco--------------------------------------------------------------------
-    while True:
-        #if right joy stick are moved => action:"scanning"
-        #else => action:"moving"
-        #if danger_score > a particular value then is threat, is suspect, is person
-        # data will  be in the form of:
-        # data = {"action": ("moving"), "marker": (2), "distanceToMarker": (4), "angleToMarker": (60)}
-        # data = {"action":("scanning") ,"objectsDetected":("THREAT"),"distanceToObject":(200),"angletoObject":(20)}
-        marker_id = marker_details["id"] #frm aruco tracker
-        marker_angle = marker_details["angleToMarker"]
-        marker_distance = marker_details["distanceToMarker"]
-
-        # if right joy stick are moved => action:"scanning"
-        StoreArgs.robot_action = "scanning"
-        data = {"action": ("scanning"), "objectsDetected": (StoreArgs.object_detected), "distanceToObject": (StoreArgs.object_distance) , "angletoObject": (StoreArgs.object_angle)}
-        # else => action:"moving"
-        StoreArgs.robot_action = "moving"
-        data = {"action": ("moving"), "marker": (marker_id), "distanceToMarker": (marker_distance), "angleToMarker": (marker_angle)}
-
-        HOST = '127.0.0.1'#local host for
-        PORT = 8998 #port for map app
-
-        connect_and_send(data, HOST, PORT)
-
-
-
-
-        #------------------------ aruco
-        #need to get the distance, and the angle to send to the app?
-        # acoular_detect()
-        # send_to_app()

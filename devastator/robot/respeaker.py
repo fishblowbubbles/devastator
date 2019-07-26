@@ -17,16 +17,15 @@ PORT = 8888
 DEVICE_NAME = "ReSpeaker 4 Mic Array (UAC1.0)"
 
 RATE, CHANNELS, WIDTH = 16000, 6, 2
-CHUNK_SIZE = 1024
-BUFFER_SIZE_IN_SECONDS = 20
+SECONDS, CHUNK_SIZE = 2, 1024
 
 api = tuning.find()
 
 
 class ReSpeaker:
-    def __init__(self, rate=RATE, channels=CHANNELS, width=WIDTH, chunk_size=CHUNK_SIZE,
-                 seconds=BUFFER_SIZE_IN_SECONDS, device_name=DEVICE_NAME,
-                 host=HOST, port=PORT):
+    def __init__(self, rate=RATE, channels=CHANNELS, width=WIDTH,
+                 seconds=SECONDS, chunk_size=CHUNK_SIZE,
+                 device_name=DEVICE_NAME, host=HOST, port=PORT):
         self.host, self.port = host, port
         self.audio = pyaudio.PyAudio()
 
@@ -51,14 +50,18 @@ class ReSpeaker:
             message = "{} not found".format(device_name)
             raise Exception(message)
 
+    def _get_sample(self):
+        sample = self.stream.read(self.chunk_size, exception_on_overflow=False)
+        sample = np.frombuffer(sample, dtype=np.int16)
+        sample = sample[:, np.newaxis]
+        return sample
+
     def _get_buffer(self):
         shape =  (len(self.buffer) * self.chunk_size, self.channels)
         samples = np.reshape(self.buffer, shape)
         return samples
 
     def _process_requests(self):
-        if self.requests.empty():
-            return
         samples = self._get_buffer()
         while not self.requests.empty():
             connection = self.requests.get()
@@ -75,21 +78,16 @@ class ReSpeaker:
             finally:
                 server.shutdown(socket.SHUT_RDWR)
 
-    def get_sample(self):
-        sample = self.stream.read(self.chunk_size, exception_on_overflow=False)
-        sample = np.frombuffer(sample, dtype=np.int16)
-        sample = sample[:, np.newaxis]
-        return sample
-
     def run(self):
         server = Process(target=self._start_server)
         server.daemon = True
         server.start()
         try:
             while True:
-                sample = self.get_sample()
+                sample = self._get_sample()
                 self.buffer.append(sample)
-                self._process_requests()
+                if not self.requests.empty():
+                    self._process_requests()
         finally:
             self.stream.stop_stream()
             self.stream.close()
