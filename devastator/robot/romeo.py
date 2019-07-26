@@ -14,7 +14,7 @@ CONFIG = ConfigFile("devastator/robot/config.ini")
 # HOST = "192.168.1.178"  # UP-Squared 1
 # HOST = "192.168.1.232"  # UP-Squared 2
 HOST = "localhost"
-PORT = 7777
+PORT = 6060
 
 DEVICE_ID = "usb-Arduino_LLC_Arduino_Leonardo-if00"
 ENABLE, DISABLE = "enable", "disable"

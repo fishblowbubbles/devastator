@@ -21,7 +21,7 @@ def vokaturi_func(filename):
     probabilities = Vokaturi.EmotionProbabilities()
     voice.extract(quality, probabilities)
 
-    prediction, confidence = "-", 0
+    prediction, confidence = None, 0
 
     if quality.valid:
         n = probabilities.neutrality

@@ -2,7 +2,8 @@ import argparse
 import pickle
 import socket
 from collections import deque
-from multiprocessing import Process, Queue
+from queue import Queue
+from threading import Thread
 
 import numpy as np
 import pyaudio
@@ -12,7 +13,7 @@ from robot.helpers import recv_obj, send_data
 from robot.micarray import tuning
 
 HOST = "localhost"
-PORT = 8888
+PORT = 5050
 
 DEVICE_NAME = "ReSpeaker 4 Mic Array (UAC1.0)"
 
@@ -71,15 +72,12 @@ class ReSpeaker:
         with socket.socket() as server:
             server.bind((self.host, self.port))
             server.listen()
-            try:
-                while True:
-                    connection, _ = server.accept()
-                    self.requests.put(connection)
-            finally:
-                server.shutdown(socket.SHUT_RDWR)
+            while True:
+                connection, _ = server.accept()
+                self.requests.put(connection)
 
     def run(self):
-        server = Process(target=self._start_server)
+        server = Thread(target=self._start_server)
         server.daemon = True
         server.start()
         try:
@@ -92,4 +90,4 @@ class ReSpeaker:
             self.stream.stop_stream()
             self.stream.close()
             self.audio.terminate()
-            server.terminate()
+            server._stop()

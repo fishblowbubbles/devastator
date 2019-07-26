@@ -29,8 +29,9 @@ class Tracker:
                 marker = {}
                 marker["id"] = ids[i]
                 marker["corners"] = corners[i]
-                marker["distance"] = round(depth[y, x] / 1000, 2)
-                marker["angle"] = round((x - (width / 2)) * (self.fov / width), 2)
+                marker["distanceToMarker"] = round(depth[y, x] / 1000, 2)
+                marker["angleToMarker"] = round((x - (width / 2)) \
+                                          * (self.fov / width), 2)
                 markers.append(marker)
         draw_markers(rgb, markers, corners)
         if show:

@@ -4,11 +4,11 @@ from robot import respeaker
 from robot.helpers import get_data
 from sound.helpers import vokaturi_func
 
-EMOTIONS = {"-": None, 0: "Neutral", 1: "Happy", 2: "Sad", 3: "Anger", 4: "Fear"}
+EMOTIONS = {None: "-", 0: "Neutral", 1: "Happy", 2: "Sad", 3: "Anger", 4: "Fear"}
 THRESHOLD = 0.95
 
 
-class Emotion:
+class Sentiment:
     def __init__(self, emotions=EMOTIONS, filename=".tmp/audio.wav"):
         self.emotions = emotions
         self.filename = filename
