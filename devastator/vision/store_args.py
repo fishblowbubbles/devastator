@@ -106,7 +106,7 @@ class StoreArgs:
         self.robot_action = robot_action
 
 
-    def obj_report_info(self,detection,timestamp,direction,emotion,gunshot,):
+    def obj_report_info(self,detection,timestamp,direction,emotion,gunshot):
         #### assume data structure of detection is:
         #### eg. detection = [{"depth":0.762,"danger_score":3.44,"equip":[{"label":"Rifle","box":{}}],"label":"Person","box":{}},{"depth":0.762,"danger_score":3.44,"equip":[{"label":"Rifle","box":{}},{"label":"Handgun","box":{}}],"label":"Person","box":{}}]
         self.person_count = len(detection)

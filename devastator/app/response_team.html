@@ -1,10 +1,9 @@
 +<!--include auto refresh-->
 <!--Finalised UI with autorefresh function (refreshes every 3 seconds (need to run flask server on NavigationWebUI first)-->
-
 <!DOCTYPE html>
  <html>
       <head>
-           <title>Webslesson Tutorial | Show JSON Data in Jquery Datatables</title>
+           <title>Report Logs</title>
            <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css" />
            <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
            <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
@@ -73,7 +72,8 @@ setInterval( function () {
     $("#example").DataTable().clear();
     var length = Object.keys(data.data).length;
     for(var i = 1; i < length+1; i++) {
-      var customer = data.data['logs'+i];
+      var customer = data.data[i];
+      console.log(customer);
 
       // You could also use an ajax property on the data table initialization
       $('#example').dataTable().fnAddData( [

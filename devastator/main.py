@@ -81,7 +81,7 @@ if __name__ == "__main__":
                                           StoreArgs.iou_threshold,
                                           depth_given=True)  # gives a list of dictionaries #gives people
 
-            reportLogs.obj_report_info() #dump files to json
+            reportLogs.obj_report_info(detection,timestamp,direction,emotion,gunshot) #dump files to json
 
             ### ------------------------- aruco tracker stuff --------------------------------------------
 
