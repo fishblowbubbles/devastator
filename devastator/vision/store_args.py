@@ -2,6 +2,8 @@
 
 import os
 import json
+from robot.helpers import get_data
+
 # INPUT_STREAM = "cam"
 # HOST = "localhost" #host and port of mini_map_new.py
 # # PORT = 8898 #host and port of mini_map_new.py
@@ -33,22 +35,6 @@ OBJ_DETECTED = ""
 ROBOT_ACTION = "Moving"
 
 JSON_INFO = json.load(open('../app/logs2.json'))
-
-# JSON_INFO = {
-#     "data": {
-#         "0": {
-#             "Time_Stamp": "example",
-#             "Robot_Coordinates": "example",
-#             "Threat_Direction": "example",
-#             "Emotions_Present": "example",
-#             "Gunshots": "example",
-#             "Objects_Of_Interest": OBJ_OF_INTEREST,
-#             "More_Details": "<a href= www.google.com.sg>www.viewmorehere.com  </a>"
-#         }
-#     }
-# }
-
-
 
 
 #----------------------- detection ------------------------
@@ -118,3 +104,77 @@ class StoreArgs:
         self.object_danger_score = object_danger_score
         self.object_detected = object_detected
         self.robot_action = robot_action
+
+
+    def obj_report_info(self,detection,timestamp,direction,emotion,gunshot,):
+        #### assume data structure of detection is:
+        #### eg. detection = [{"depth":0.762,"danger_score":3.44,"equip":[{"label":"Rifle","box":{}}],"label":"Person","box":{}},{"depth":0.762,"danger_score":3.44,"equip":[{"label":"Rifle","box":{}},{"label":"Handgun","box":{}}],"label":"Person","box":{}}]
+        self.person_count = len(detection)
+
+        if len(detection) != 0:
+            for i in detection:
+                for j in i["equip"]:
+                    if j["label"] == "Rifle":
+                        self.rifle_count += 1
+
+                    elif j["label"] == "Handgun":
+                        self.handgun_count += 1
+
+                    elif j["label"] == "Knife":
+                        self.knife_count += 1
+
+                    elif j["label"] == "Jacket":
+                        self.jacket_count += 1
+
+                    elif j["label"] == "Sunglasses":
+                        self.sunglass_count += 1
+
+                    elif j["label"] == "Police":
+                        self.police_count += 1
+
+                    elif j["label"] == "Hat":
+                        self.hat_count += 1
+
+                self.object_distance = i["depth"]
+                self.object_angle = i["h_angle"]
+                self.object_danger_score = i["danger_score"]
+
+                if self.object_danger_score > 0.5:
+                    self.object_detected = "THREAT"
+
+                elif 0.3 <= self.object_danger_score <= 0.5:
+                    self.object_detected = "SUSPECT"
+
+                else:
+                    self.object_detected = "PERSON"
+
+            ###format the data for objects of interest to parse into report ui app
+            self.obj_of_interest = "Handgun: " + str(self.handgun_count) + "  <p/> " + "Jacket: " + str(
+                self.jacket_count) + " <p/> " + "Knife: " + str(
+                self.knife_count) + " <p/> " + "Person: " + str(
+                self.person_count) + " <p/> " + "Rifle " + str(self.rifle_count) + " <p/> " + "Sunglasses: " \
+                                        + str(self.sunglass_count) + " <p/> " + "Police: " + str(
+                self.police_count) + " <p/> "
+            # new_json_info =  to append to current obj_of_interest?
+            for keys in self.json_info['data']:
+                keys = keys
+                self.new_key = int(keys) + 1
+
+            # take the latest new_key from above
+            new_data = {
+                str(self.new_key): {
+                    "Time_Stamp": timestamp,
+                    "Threat_Direction": direction,
+                    "Emotions_Present": emotion,  # str(emotions)?
+                    "Gunshots": gunshot,
+                    "Objects_Of_Interest": self.obj_of_interest,
+                    "More_Details": "<a href=dummylink>www.viewmorehere.com  </a>"
+                }
+            }
+            self.json_info['data'].update(new_data)  # updates the json
+
+            with open('../app/logs2.json', 'w') as outfile:
+                json.dump(self.json_info, outfile,
+                          indent=4)  # update the json file in app folder #for report logs ui
+        else:
+            self.object_detected = ""

@@ -37,6 +37,7 @@ if __name__ == "__main__":
         }
         # darknet, tracker = Darknet(), Tracker()
         # emotion, gunshot = Emotion(), Gunshot()
+        reportLogs = StoreArgs()
     elif args.app:
         devices = {
             # "App": app.App(),
@@ -80,74 +81,7 @@ if __name__ == "__main__":
                                           StoreArgs.iou_threshold,
                                           depth_given=True)  # gives a list of dictionaries #gives people
 
-            #### assume data structure of detection is:
-            #### eg. detection = [{"depth":0.762,"danger_score":3.44,"equip":[{"label":"Rifle","box":{}}],"label":"Person","box":{}},{"depth":0.762,"danger_score":3.44,"equip":[{"label":"Rifle","box":{}},{"label":"Handgun","box":{}}],"label":"Person","box":{}}]
-            StoreArgs.person_count = len(detection)
-
-            if len(detection) != 0:
-                for i in detection:
-                    for j in i["equip"]:
-                        if j["label"] == "Rifle":
-                            StoreArgs.rifle_count += 1
-
-                        elif j["label"] == "Handgun":
-                            StoreArgs.handgun_count += 1
-
-                        elif j["label"] == "Knife":
-                            StoreArgs.knife_count += 1
-
-                        elif j["label"] == "Jacket":
-                            StoreArgs.jacket_count += 1
-
-                        elif j["label"] == "Sunglasses":
-                            StoreArgs.sunglass_count += 1
-
-                        elif j["label"] == "Police":
-                            StoreArgs.police_count += 1
-
-                        elif j["label"] == "Hat":
-                            StoreArgs.hat_count += 1
-
-                    StoreArgs.object_distance = i["depth"]
-                    StoreArgs.object_angle = i["h_angle"]
-                    StoreArgs.object_danger_score = i["danger_score"]
-
-                    if StoreArgs.object_danger_score > 0.5:
-                        StoreArgs.object_detected = "THREAT"
-
-                    elif 0.3 <= StoreArgs.object_danger_score <= 0.5:
-                        StoreArgs.object_detected = "SUSPECT"
-
-                    else:
-                        StoreArgs.object_detected = "PERSON"
-
-                ###format the data for objects of interest to parse into report ui app
-                StoreArgs.obj_of_interest = "Handgun: " + str(StoreArgs.handgun_count) + "  <p/> " + "Jacket: " + str(
-                    StoreArgs.jacket_count) + " <p/> " + "Knife: " + str(StoreArgs.knife_count) + " <p/> " + "Person: " + str(StoreArgs.person_count) + " <p/> " + "Rifle " + str(rifle_count) + " <p/> " + "Sunglasses: " \
-                                            + str(StoreArgs.sunglass_count) + " <p/> " + "Police: " + str(StoreArgs.police_count) + " <p/> "
-                # new_json_info =  to append to current obj_of_interest?
-                for keys in StoreArgs.json_info['data']:
-                    keys = keys
-                    StoreArgs.new_key = int(keys) + 1
-
-                # take the latest new_key from above
-                new_data = {
-                    str(StoreArgs.new_key): {
-                        "Time_Stamp": timestamp,
-                        "Threat_Direction": direction,
-                        "Emotions_Present": emotion,  # str(emotions)?
-                        "Gunshots": gunshot,
-                        "Objects_Of_Interest": StoreAgs.obj_of_interest,
-                        "More_Details": "<a href= www.google.com.sg>www.viewmorehere.com  </a>"
-                    }
-                }
-                StoreArgs.json_info['data'].update(new_data)  # updates the json
-
-                with open('../app/logs2.json', 'w') as outfile:
-                    json.dump(StoreArgs.json_info, outfile,
-                              indent=4)  # update the json file in app folder #for report logs ui
-            else:
-                StoreArgs.object_detected = ""
+            reportLogs.obj_report_info() #dump files to json
 
             ### ------------------------- aruco tracker stuff --------------------------------------------
 
