@@ -55,6 +55,7 @@ if __name__ == "__main__":
         print("Starting {} ...".format(name))
         process.start()
 
+
     time.sleep(5)
 
 
@@ -106,12 +107,23 @@ if __name__ == "__main__":
                     elif j["label"] == "Hat":
                         StoreArgs.hat_count += 1
 
+                StoreArgs.object_distance = i["depth"]
+                StoreArgs.object_angle = i["h_angle"]
+                StoreArgs.object_danger_score = i["danger_score"]
+
+                if StoreArgs.object_danger_score > 0.5:
+                    StoreArgs.object_detected = "THREAT"
+
+                elif 0.3 <= StoreArgs.object_danger_score <= 0.5:
+                    StoreArgs.object_detected = "SUSPECT"
+
+                else:
+                    StoreArgs.object_detected = "PERSON"
+
             ###format the data for objects of interest to parse into report ui app
             StoreArgs.obj_of_interest = "Handgun: " + str(StoreArgs.handgun_count) + "  <p/> " + "Jacket: " + str(
-                StoreArgs.jacket_count) + " <p/> " + "Knife: " + str(
-                StoreArgs.knife_count) + " <p/> " + "Person: " + str(
-                StoreArgs.person_count) + " <p/> " + "Rifle " + str(rifle_count) + " <p/> " + "Sunglasses: " + str(
-                StoreArgs.sunglass_count) + " <p/> " + "Police: " + str(StoreArgs.police_count) + " <p/> "
+                StoreArgs.jacket_count) + " <p/> " + "Knife: " + str(StoreArgs.knife_count) + " <p/> " + "Person: " + str(StoreArgs.person_count) + " <p/> " + "Rifle " + str(rifle_count) + " <p/> " + "Sunglasses: " \
+                                        + str(StoreArgs.sunglass_count) + " <p/> " + "Police: " + str(StoreArgs.police_count) + " <p/> "
             # new_json_info =  to append to current obj_of_interest?
             for keys in StoreArgs.json_info['data']:
                 keys = keys
@@ -137,4 +149,3 @@ if __name__ == "__main__":
     finally:
         for name, process in processes.items():
             print("Stopping {}".format(name))
-            process.terminate()
