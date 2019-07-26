@@ -26,6 +26,11 @@ PERSON_COUNT = 0
 POLICE_COUNT = 0
 OBJ_OF_INTEREST = ""
 NEW_KEY = 0 #for the json format numbering
+OBJ_DISTANCE = 0.0
+OBJ_ANGLE  = 0.0
+OBJ_DANGER_SCORE = 0
+OBJ_DETECTED = "PERSON"
+ROBOT_ACTION = "Moving"
 
 JSON_INFO = json.load(open('../app/logs2.json'))
 
@@ -76,7 +81,12 @@ class StoreArgs:
                  knife_count=KNIFE_COUNT,
                  obj_of_interest=OBJ_OF_INTEREST,
                  json_info=JSON_INFO,
-                 new_key=NEW_KEY
+                 new_key=NEW_KEY,
+                 object_distance = OBJ_DISTANCE,
+                 object_angle = OBJ_ANGLE,
+                 object_danger_score = OBJ_DANGER_SCORE,
+                 object_detected = OBJ_DETECTED,
+                 robot_action = ROBOT_ACTION
 
                  ):
         # self.input_stream = input_stream
@@ -103,3 +113,8 @@ class StoreArgs:
         self.obj_of_interest = obj_of_interest
         self.json_info = json_info
         self.new_key = new_key
+        self.object_distance = object_distance
+        self.object_angle = object_angle
+        self.object_danger_score = object_danger_score
+        self.object_detected = object_detected
+        self.robot_action = robot_action

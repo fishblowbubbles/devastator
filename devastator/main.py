@@ -45,7 +45,7 @@ if __name__ == "__main__":
         print("Starting {} ...".format(name))
         process.start()
 
-    """
+    # """
     time.sleep(5)
 
     try:
@@ -97,12 +97,23 @@ if __name__ == "__main__":
                     elif j["label"] == "Hat":
                         StoreArgs.hat_count += 1
 
+                StoreArgs.object_distance = i["depth"]
+                StoreArgs.object_angle = i["h_angle"]
+                StoreArgs.object_danger_score = i["danger_score"]
+
+                if StoreArgs.object_danger_score > 0.5:
+                    StoreArgs.object_detected = "THREAT"
+
+                elif 0.3 <= StoreArgs.object_danger_score <= 0.5:
+                    StoreArgs.object_detected = "SUSPECT"
+
+                else:
+                    StoreArgs.object_detected = "PERSON"
+
             ###format the data for objects of interest to parse into report ui app
             StoreArgs.obj_of_interest = "Handgun: " + str(StoreArgs.handgun_count) + "  <p/> " + "Jacket: " + str(
-                StoreArgs.jacket_count) + " <p/> " + "Knife: " + str(
-                StoreArgs.knife_count) + " <p/> " + "Person: " + str(
-                StoreArgs.person_count) + " <p/> " + "Rifle " + str(rifle_count) + " <p/> " + "Sunglasses: " + str(
-                StoreArgs.sunglass_count) + " <p/> " + "Police: " + str(StoreArgs.police_count) + " <p/> "
+                StoreArgs.jacket_count) + " <p/> " + "Knife: " + str(StoreArgs.knife_count) + " <p/> " + "Person: " + str(StoreArgs.person_count) + " <p/> " + "Rifle " + str(rifle_count) + " <p/> " + "Sunglasses: " \
+                                        + str(StoreArgs.sunglass_count) + " <p/> " + "Police: " + str(StoreArgs.police_count) + " <p/> "
             # new_json_info =  to append to current obj_of_interest?
             for keys in StoreArgs.json_info['data']:
                 keys = keys
@@ -129,12 +140,13 @@ if __name__ == "__main__":
         for name, process in processes.items():
             print("Stopping {}".format(name))
             process.terminate()
-    """
+    # """
 
 ### -----------------------------------------------aruco--------------------------------------------------------------------
     while True:
         #if right joy stick are moved => action:"scanning"
         #else => action:"moving"
+        #if danger_score > a particular value then is threat, is suspect, is person
         # data will  be in the form of:
         # data = {"action": ("moving"), "marker": (2), "distanceToMarker": (4), "angleToMarker": (60)}
         # data = {"action":("scanning") ,"objectsDetected":("THREAT"),"distanceToObject":(200),"angletoObject":(20)}
@@ -143,9 +155,11 @@ if __name__ == "__main__":
         marker_distance = marker_details["distanceToMarker"]
 
         # if right joy stick are moved => action:"scanning"
-
+        StoreArgs.robot_action = "scanning"
+        data = {"action": ("scanning"), "objectsDetected": (StoreArgs.object_detected), "distanceToObject": (StoreArgs.object_distance) , "angletoObject": (StoreArgs.object_angle)}
         # else => action:"moving"
-        data = {"action": ("moving"), "marker": marker_id, "distanceToMarker": marker_distance, "angleToMarker": marker_angle}
+        StoreArgs.robot_action = "moving"
+        data = {"action": ("moving"), "marker": (marker_id), "distanceToMarker": (marker_distance), "angleToMarker": (marker_angle)}
 
         HOST = '127.0.0.1'#local host for
         PORT = 8998 #port for map app
