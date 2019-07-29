@@ -17,4 +17,3 @@ devastator/sound/vokaturi/__pycache__
 devastator/vision/__pycache__
 devastator/vision/darknet/__pycache__/
 devastator/navigation/__pycache__
-devastator/navigation/angle_driver.py
