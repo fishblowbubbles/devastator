@@ -74,7 +74,7 @@ class KalmanFilter(object):
         current_time = time()
         dt = current_time - self.last_time
         self.last_time = current_time
-        u = np.zeros((self.r, 1)) if u is None else self.saturate_controller_outputs(u)
+        u = np.zeros((self.r, 1)) if u is None else self.xsaturate_controller_outputs(u)
         self.update_discrete_model(dt)
         self.x = np.dot(self.F, self.x) + np.dot(self.G, u)
         self.P = np.dot(np.dot(self.F, self.P), self.F.T) + self.Q
