@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.linalg import expm # matrix exponential
-from control import ss, sample_system
+import control
 from time import time
 
 class KalmanFilter(object):
@@ -34,9 +34,9 @@ class KalmanFilter(object):
         # print("{} shape is {}".format('D', self.D.shape))
 
         # GO TO statesp.py and comment out the self._remove_useless_states() line.
-        self.sysc = ss(self.A, self.B, self.H, self.D)
+        self.sysc = control.ss(self.A, self.B, self.H, self.D)
         assert np.array_equal(self.sysc.A, self.A), \
-            "IF U SEE THIS ERROR: Comment out the self._remove_useless_states() line in the control library, statesp.py"
+            "IF U SEE THIS ERROR: Comment out the self._remove_useless_states() line in the control library at {}, in statesp.py".format(control.__file__)
 
         #self.F and self.G will be calculated upon a predict call using update_discrete_model
         
@@ -52,7 +52,7 @@ class KalmanFilter(object):
         # rows are the individual elements of u
         # n_cols = 2 always. lower limit then higher limit.
         self.saturation_limits = kwds.get('saturation_limits', 
-                                    np.tile(np.array(-1,1),(self.r, 1))) # default
+                                    np.tile(np.array([-1,1]),(self.r, 1))) # default
     
     def saturate_controller_outputs(self, u):
         u_clipped = np.clip(u, self.saturation_limits[:,0], self.saturation_limits[:,1])
@@ -62,9 +62,12 @@ class KalmanFilter(object):
         '''
         creates the discrete system due to non-constant dt
         '''
-        self.sysd = sample_system(self.sysc, dt) # create a discrete time model
+        self.sysd = control.sample_system(self.sysc, dt) # create a discrete time model
         self.F = self.sysd.A
         self.G = self.sysd.B
+
+    def get_states(self):
+        return self.x
 
     def predict(self, u=None):
         '''

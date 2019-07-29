@@ -3,9 +3,12 @@ Input: distance to target and angle to target
 Setpoint: distance to target
 Output: motor commands
 '''
+import asyncio
 import sys
 import numpy as np
 import control
+import pickle
+import socket
 
 # local imports
 import kalman
@@ -15,34 +18,75 @@ import controllers
 
 chassis_params = {
     'motor_force_constant' : 20, # not measured yet, in Newtons/(drive_unit) where -1 < drive_unit < 1
-    'track_width' : 0.15, # not measured yet, in meters 
-    'motor_damping_constant' : 20, # not measured yet, in N/(m s^-1)
-    'chassis_mass' : 3, # not measured yet, in kg
-    'chassis_J' : 1 # moment of inertia, not measured yet
+    'track_width' : 0.19, # in meters 
+    'motor_damping_constant' : 40, # not measured yet, in N/(m s^-1)
+    'chassis_mass' : 2.6, # not measured yet, in kg
+    'chassis_J' : 0.5*2.6*(0.13**2) # moment of inertia, not measured yet
 }
 
 model = potato.TrackedChassis(**chassis_params) # see file for constants
 
 controller_params = {
+    'debug' : True,
     'A' : model.A,
     'B' : model.B,
     'C' : model.C,
     'D' : model.D,
     'integral_action' : True,
     'gain_method' : 'lqr',
-    'Q' : np.matrix([[ 1 , 0 , 0 , 0 ],
-                     [ 0 , 1 , 0 , 0 ],
-                     [ 0 , 0 , 10, 0 ],
-                     [ 0 , 0 , 0 , 1 ]
+    'Q' : np.matrix([[ 1 , 0 , 0 , 0 , 0 , 0 ],
+                     [ 0 , 1 , 0 , 0 , 0 , 0 ],
+                     [ 0 , 0 , 10, 0 , 0 , 0 ],
+                     [ 0 , 0 , 0 , 1 , 0 , 0 ],
+                     [ 0 , 0 , 0 , 0 , 0.000001 , 0 ],
+                     [ 0 , 0 , 0 , 0 , 0 , 0.000001 ]
                     ]),
     'R' : 10*np.eye(2),
     'saturation_limits' : np.tile( np.array([-1,1]) , (2,1) ),
-    'back_calc_weight' : np.matrix([[ 1 , 0 ],
+    'back_calc_weight' : np.matrix([
+                                   [ 1 , 0 ],
                                    [ 0 , 1 ]
-                                 ])
+                                   ])
 }
 
-controller = controllers.FullStateFeedbackController(**controller_params)
+async def handler(conn):
+    while True:
+        observation = await loop.sock_recv(conn, 1024)
+        if not msg:
+            break
+        try:
+            msg = pickle.loads(msg)
+            # update states based on new observation of system
+            controller.update_states(self, observation) 
+        except pickle.UnpicklingError:
+            print('Unable to unpickle msg: {}'.format(msg))
+
+        # await loop.sock_sendall(conn, msg)
+    conn.close()
+
+async def server():
+    while True:
+        conn, addr = await loop.sock_accept(s)
+        loop.create_task(handler(conn))
+
+if __name__ == "__main__":
+    try:
+        controller = controllers.FullStateFeedbackController(**controller_params)
+
+        loop = asyncio.get_event_loop()
+        s = socket.socket()
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.setblocking(False)
+        s.bind((host, port))
+        s.listen(10)
+        loop.create_task(server())
+        loop.run_forever()
+    finally:
+        loop.close()
+
+
+
 
 
 

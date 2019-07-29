@@ -1,5 +1,6 @@
 import numpy as np
 from control import ss, sample_system, place, acker, lqr
+import kalman
 
 ### TODO ###
 # future work:
@@ -10,6 +11,7 @@ class FullStateFeedbackController(object):
     Full state feedback controller
     '''
     def __init__(self, *args, **kwds):
+        self.debug = kwds.get('debug', False)
         A = kwds.get('A', np.matrix(0))
         B = kwds.get('B', np.matrix(0))
         C = kwds.get('C', np.matrix(0))
@@ -32,11 +34,20 @@ class FullStateFeedbackController(object):
         self.B = B # input matrix
         self.C = C # output matrix
         self.D = D # feedforward matrix
-        self.n = n # num of statesSSS
+        self.n = n # num of states
         self.m = m # num of outputs
         self.r = r # num of inputs
 
         self.sysc = ss(self.A, self.B, self.C, self.D)
+
+        if self.debug is True:
+            print('n : {}'.format(self.n))
+            print('m : {}'.format(self.m))
+            print('r : {}'.format(self.r))
+            print('A :\n{}\n'.format(self.A))
+            print('B :\n{}\n'.format(self.B))
+            print('C :\n{}\n'.format(self.C))
+            print('D :\n{}\n'.format(self.D))
 
         self.poles = kwds.get("poles", None)
 
@@ -64,20 +75,40 @@ class FullStateFeedbackController(object):
         g = gm.get(self.gain_method, None)
         if g is not None:
             self.K = g[0](*g[1])
+            if self.debug is True:
+                print('K :\n{}\n'.format(self.K))
         
         if self.integral_action is True:
             self.Ki = -self.K[:,-self.m:]
             self.Kt = np.linalg.pinv(self.Ki)
 
+            if self.debug is True:
+                print('Kt :\n{}\n'.format(self.Kt))
+                
             self.back_calc_weight = kwds.get("back_calc_weight", np.eye(self.m)) 
             self.Kt = self.back_calc_weight @ self.Kt
-            self.B_aug = self._augment_B(self.B, self.Kt)
+            self.B_aug, self.D_aug = self._augment_BD(self.B, self.D, self.Kt)
 
         # rows for each input.
         # each row specifies the [lower_limit, upper_limit] of saturation. 
         self.saturation_limits = kwds.get("saturation_limits",
                                     np.tile( np.array([-1,1]) , (self.r,1) )
-                                        )   
+                                        )
+        if self.debug is True:
+            print('sat_limits :\n{}\n'.format(self.saturation_limits))
+        
+        #kalman params
+        kalman_kwds = {
+            'A' : self.A,
+            'B' : self.B_aug,
+            'H' : self.C,
+            'D' : self.D_aug,
+            'process_covariance' : kwds.get('process_covariance', None),
+            'measurement_covariance' : kwds.get('measurement_covariance', None),
+            'saturation_limits' : self.saturation_limits
+        }
+        self.observer = kalman.KalmanFilter(**kalman_kwds)
+        self.prev_u_aug = np.zeros((1, self.r*2))
 
     def _augment_sys(self, A, B, C, D, n, m, r):
         A_aug = np.vstack((A,-C))
@@ -87,7 +118,7 @@ class FullStateFeedbackController(object):
         n += m
         return A_aug, B_aug, C_aug, D, n, m, r
 
-    def _augment_B(self, B, Kt):
+    def _augment_BD(self, B, D, Kt):
         '''
         B_aug = 
         [
@@ -96,10 +127,14 @@ class FullStateFeedbackController(object):
         ]
         where Kt is the pseudoinverse of the integral gain Ki
         '''
-        L = np.vstack((B, np.zeros(self.m,self.r)))
-        R = np.vstack((np.zeros((self.n, self.r)), Kt))
+        
+        L = B
+        R = np.vstack((np.zeros((B.shape[0]-Kt.shape[0], Kt.shape[1])), Kt))
         B_aug = np.hstack((L,R))
-        return B_aug
+        D_aug = np.hstack((D,np.zeros((D.shape[0], B_aug.shape[1]-D.shape[1]))))
+        if self.debug is True:
+            print('B_aug :\n{}\n'.format(B_aug))
+        return B_aug, D_aug
 
     def __call__(self, *args, **kwds):
         '''
@@ -118,11 +153,12 @@ class FullStateFeedbackController(object):
 
     ### CONTROLLER OUTPUTS ###
 
-    def get_controller_output(self, x):
+    def get_controller_output(self):
         '''
         Control law: u = -Kx
         splits control signal u into the saturated and unsaturated part -> u_aug
         '''
+        x = self.observer.predict(self.prev_u_aug)
         u = -self.K @ x
         u_sat = np.clip(
             u, 
@@ -130,7 +166,12 @@ class FullStateFeedbackController(object):
             self.saturation_limits[:1]
             )
         u_aug = np.vstack((u_sat, u-u_sat))
+        self.prev_u_aug = u_aug
         return u_aug
+    
+    ### input sensor readings ###
+    def update_observation(self, y):
+        self.observer.update(y)
 
 if __name__ == "__main__":
     pass
