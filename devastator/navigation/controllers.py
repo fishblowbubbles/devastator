@@ -170,7 +170,7 @@ class FullStateFeedbackController(object):
         return u_aug
     
     ### input sensor readings ###
-    def update_observation(self, y):
+    def update_states(self, y):
         self.observer.update(y)
 
 if __name__ == "__main__":

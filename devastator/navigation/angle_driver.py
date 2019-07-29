@@ -15,6 +15,8 @@ import kalman
 import physical_chassis as potato
 import controllers
 
+## TODO: IMPLEMENT MANUAL CONTROL TRACKING FOR NO AUTO/MANUAL MODE SWITCHING TRANSIENT ##
+##       THIS IS DONE BY SETTING THE CLIP POINTS TO THE MANUAL VALUE EXACTLY.          ##
 
 chassis_params = {
     'motor_force_constant' : 20, # not measured yet, in Newtons/(drive_unit) where -1 < drive_unit < 1
@@ -49,17 +51,31 @@ controller_params = {
                                    ])
 }
 
+def get_romeo_commands():
+    '''
+    returns commands to be sent to the romeo controller
+    '''
+    u = controller.get_controller_output()
+    T = np.matrix([
+        [ 0.5 , 0.5 ],
+        [-0.5 ,-0.5 ]
+    ])
+    romeo_commands = T @ u[0:2,:]
+    forward_command = romeo_commands[0:...]
+    turn_command = romeo_commands[1,...]
+    return forward_command, turn_command
+
 async def handler(conn):
     while True:
         observation = await loop.sock_recv(conn, 1024)
-        if not msg:
+        if not observation:
             break
         try:
             msg = pickle.loads(msg)
             # update states based on new observation of system
             controller.update_states(self, observation) 
         except pickle.UnpicklingError:
-            print('Unable to unpickle msg: {}'.format(msg))
+            print('Unable to unpickle msg: {}'.format(observation))
 
         # await loop.sock_sendall(conn, msg)
     conn.close()
