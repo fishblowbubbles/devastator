@@ -71,8 +71,7 @@ if __name__ == "__main__":
             rgb, markers = tracker.detect(rgb, depth)
 
             new_data = {
-                "data": {
-                    0: {
+                    "1": {
                         "Time_Stamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         "Threat_Direction": direction,
                         "Emotions_Present": emotion,  # str(emotions)?
@@ -81,7 +80,7 @@ if __name__ == "__main__":
                         "More_Details": "<a href= www.google.com.sg>www.viewmorehere.com  </a>"
                     }
                 }
-            }
+
 
             print(new_data)
 

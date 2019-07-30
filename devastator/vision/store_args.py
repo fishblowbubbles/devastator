@@ -34,13 +34,8 @@ OBJ_DANGER_SCORE = 0
 OBJ_DETECTED = ""
 ROBOT_ACTION = "Moving"
 
-JSON_INFO = json.load(open('../app/logs2.json'))
-
 
 #----------------------- detection ------------------------
-# mapping labels
-# with open(LABELS, 'r') as f:
-#     LABELS_MAP = [x.strip() for x in f]
 
 class StoreArgs:
     def __init__(self,
@@ -66,7 +61,6 @@ class StoreArgs:
                  police_count=POLICE_COUNT,
                  knife_count=KNIFE_COUNT,
                  obj_of_interest=OBJ_OF_INTEREST,
-                 json_info=JSON_INFO,
                  new_key=NEW_KEY,
                  object_distance = OBJ_DISTANCE,
                  object_angle = OBJ_ANGLE,
@@ -96,8 +90,6 @@ class StoreArgs:
         self.hat_count = hat_count
         self.jacket_count = jacket_count
         self.sunglass_count = sunglass_count
-        self.obj_of_interest = obj_of_interest
-        self.json_info = json_info
         self.new_key = new_key
         self.object_distance = object_distance
         self.object_angle = object_angle
@@ -110,7 +102,9 @@ class StoreArgs:
         #### assume data structure of detection is:
         #### eg. detection = [{"depth":0.762,"danger_score":3.44,"equip":[{"label":"Rifle","box":{}}],"label":"Person","box":{}},{"depth":0.762,"danger_score":3.44,"equip":[{"label":"Rifle","box":{}},{"label":"Handgun","box":{}}],"label":"Person","box":{}}]
         self.person_count = len(detection)
-
+        detected_objects = []
+        distance_to_obj = []
+        angle_to_obj = []
         if len(detection) != 0:
             for i in detection:
                 for j in i["equip"]:
@@ -147,6 +141,9 @@ class StoreArgs:
 
                 else:
                     self.object_detected = "PERSON"
+                detected_objects.append(self.object_detected) #gives the list of people detected
+                distance_to_obj.append(self.object_distance)
+                angle_to_obj.append(self.object_angle)
 
             ###format the data for objects of interest to parse into report ui app
             self.obj_of_interest = "Handgun: " + str(self.handgun_count) + "  <p/> " + "Jacket: " + str(
@@ -155,6 +152,8 @@ class StoreArgs:
                 self.person_count) + " <p/> " + "Rifle " + str(self.rifle_count) + " <p/> " + "Sunglasses: " \
                                         + str(self.sunglass_count) + " <p/> " + "Police: " + str(
                 self.police_count) + " <p/> "
+
+
             # new_json_info =  to append to current obj_of_interest?
             for keys in self.json_info['data']:
                 keys = keys
@@ -171,10 +170,9 @@ class StoreArgs:
                     "More_Details": "<a href=dummylink>www.viewmorehere.com  </a>"
                 }
             }
-            self.json_info['data'].update(new_data)  # updates the json
 
-            with open('../app/logs2.json', 'w') as outfile:
-                json.dump(self.json_info, outfile,
-                          indent=4)  # update the json file in app folder #for report logs ui
         else:
             self.object_detected = ""
+            detected_objects=""
+
+        return detected_objects,distance_to_obj,angle_to_obj,new_data

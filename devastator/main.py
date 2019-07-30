@@ -15,10 +15,12 @@ from robot.realsense import D435i
 from robot.respeaker import ReSpeaker
 from robot.romeo import Romeo
 from robot.xpad import XPad
+from vision.helpers import split_rgbd
 from sound.helpers import emotion_detect, gunshot_detect, vokaturi_func
 from vision.call_yolo import detect, get_frame, load_model, main
 from vision.store_args import StoreArgs
 from vision.Aruco_Tracker.aruco_tracker import *
+from vision.tracker import Tracker
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -81,10 +83,25 @@ if __name__ == "__main__":
                                           StoreArgs.iou_threshold,
                                           depth_given=True)  # gives a list of dictionaries #gives people
 
-            reportLogs.obj_report_info(detection,timestamp,direction,emotion,gunshot) #dump files to json
+            category_of_people, distance_to_obj, angle_to_obj,report_log_info = reportLogs.obj_report_info(detection,timestamp,direction,emotion,gunshot) #dump files to json
+            connect_and_send(report_log_info, "192.168.1.136", 8888) #to send info to report log server
 
             ### ------------------------- aruco tracker stuff --------------------------------------------
+            #format of data to send to minimap app: data = {"marker":(2),"distanceToMarker":(3),"angleToMarker":(20), "objectsDetected":("THREAT","SUSPECT"),"distanceToObject":(4,4),"angletoObject":(20,30)}
+            d435i = realsense.D435i()
+            frames = d435i._get_frames()
+            frames = d435i._frames_to_rgbd(frames)
+            tracker = Tracker()
+            rgb, depth = split_rgbd(frames)
+            # rgb, detections = darknet.detect(rgb, depth)
+            rgb, markers = tracker.detect(rgb, depth)
+            for i in range(len(markers)):
+                marker_id = markers[i]["id"]
+                distance_to_marker = markers[i]["distanceToMarker"]
+                angle_to_marker = markers[i]["angleToMarker"]
 
+                data = {"marker":(int(marker_id)), "distanceToMarker":(int(distance_to_marker)), "angleToMarker":(int(angle_to_marker)),"objectsDetected":tuple(category_of_people),"distanceToObject":tuple(distance_to_obj), "angleToObject":tuple(angle_to_obj)}
+                connect_and_send(data, "192.168.1.136", 8998) #to connect to map ui server
 
 
     finally:
