@@ -186,7 +186,7 @@ def recv_object(client):
 
 def get_frame(input_stream, HOST=None, PORT=None):
     if input_stream == "cam":
-        input_stream = 0 
+        input_stream = 0
         cap = cv2.VideoCapture(input_stream)
         ret, frame = cap.read()
     elif input_stream == "server":
@@ -236,14 +236,17 @@ def prettyprint(detections):
     print(string)
 
 
-def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_given=False):
-    if depth_given:
-        rgb, d = frame[:, :, :3].astype(np.uint8), frame[:, :, 3]
-        rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
-        frame = np.array(rgb)
-        depth = np.array(d)
-        v_deg_per_pix = 42.5 / 720
-        h_deg_per_pix = 69.4 / 1280
+def detect(rgb, d, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_given=False):
+    # if depth_given:
+    #     rgb, d = frame[:, :, :3].astype(np.uint8), frame[:, :, 3]
+    #     rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
+    #     frame = np.array(rgb)
+    #     depth = np.array(d)
+    #     v_deg_per_pix = 42.5 / 720
+    #     h_deg_per_pix = 69.4 / 1280
+
+    frame = np.array(rgb)
+    d = np.array(d)
 
     input_blob = next(iter(net.inputs))
     n, c, h, w = net.inputs[input_blob].shape
@@ -331,7 +334,7 @@ def detect(frame, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_give
             people[likely]["equip"].append(i)
             people[likely]["danger_score"] = people[likely]["danger_score"] + i["box"]["confidence"] * danger_weights[
                 i["label"]]
-    return people, datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    return people
 
 
 def main():

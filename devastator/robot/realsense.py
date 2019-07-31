@@ -24,24 +24,10 @@ class D435i():
         self.pipeline = rs.pipeline()
         self.pipeline.start()
 
-        # while True:
-        #     try:
-        #         self.pipeline.start()
-        #         break
-        #     except RuntimeError:
-        #         print("Camera is not connected.")
-
     def _get_frames(self):
         frames = self.pipeline.wait_for_frames()
         frames = self.align.process(frames)
         return frames
-        # while True:
-        #     try:
-        #         frames = self.pipeline.wait_for_frames()
-        #         frames = self.align.process(frames)
-        #         return frames
-        #     except RuntimeError:
-        #         print("Camera is not connected.")        
 
     def _frames_to_rgbd(self, frames):
         rgb, d = frames.get_color_frame(), frames.get_depth_frame()
@@ -66,7 +52,6 @@ class D435i():
 
     def run(self):
         server = Thread(target=self._start_server)
-        server.daemon = True
         server.start()
         try:
             while True:

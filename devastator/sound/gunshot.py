@@ -6,7 +6,7 @@ from scipy.ndimage.filters import maximum_filter1d as max_filter
 from robot import respeaker
 from robot.helpers import get_data
 
-THRESHOLD = 0.05
+THRESHOLD = 0.5
 _, TEMPLATE = wavfile.read("devastator/sound/data/normalized_template.wav")
 LENGTH, INTERVAL = 163840, 2000
 
@@ -22,8 +22,9 @@ class Gunshot:
         return output
 
     def _normalize(self, data):
-        output = data / max(data)
-        output = output * self._rms(output)
+        # output = data / max(data)             # 32767
+        # output = output * self.rms(output)    # 0.0707665
+        output = data / 60000 * 0.0707665
         return output
 
     def detect(self, samples, threshold=THRESHOLD):
@@ -31,7 +32,7 @@ class Gunshot:
         correlation = signal.correlate(samples, self.template, mode="same")
         correlation = max_filter(correlation, self.interval)
         correlation = np.amax(correlation)
-        is_gunshot = correlation < threshold
+        is_gunshot = correlation > threshold
         return is_gunshot
 
     def listen(self, host=respeaker.HOST, port=respeaker.PORT):

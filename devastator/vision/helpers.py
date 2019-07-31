@@ -63,7 +63,8 @@ def livestream(detect, fps=realsense.FPS, **kwargs):
     while True:
         rgbd = get_data(realsense.HOST, realsense.PORT)
         rgb, depth = split_rgbd(rgbd)
-        detect(rgb, depth, show=True, **kwargs)
+        rgb, _ = detect(rgb, depth, **kwargs)
+        cv2.imshow("livestream", rgb)
         if cv2.waitKey(delay) == ord("q"):
             break
     cv2.destroyAllWindows()
@@ -97,7 +98,9 @@ def draw_detections(rgb, detections, names, colors=COLORS, font=FONT):
 
 def draw_markers(rgb, markers, corners, font=FONT):
     for marker in markers:
-        x, y = int(marker["corners"][0][0][0]) + 5, int(marker["corners"][0][0][1]) - 5
-        s = "Dist.: {} m, Angle: {}".format(marker["distanceToMarker"], marker["angleToMarker"])
+        x = int(marker["corners"][0][0][0]) + 5
+        y = int(marker["corners"][0][0][1]) - 5
+        s = "Dist.: {} m, Angle: {}".format(marker["distanceToMarker"],
+                                            marker["angleToMarker"])
         cv2.putText(rgb, s, (x, y), font, 0.5, (0, 255, 0), 1)
     aruco.drawDetectedMarkers(rgb, corners)

@@ -6,8 +6,8 @@ from robot import realsense
 from robot.helpers import get_data
 from vision.helpers import draw_markers, split_rgbd
 
-MARKER_LENGTH = 15.5
-FOCAL_LENGTH = 9.147152316185736
+MARKER_LENGTH = 15.5    # CM
+FOCAL_LENGTH  = 9.14715 # CM
 
 
 class Tracker:
@@ -18,7 +18,7 @@ class Tracker:
         self.parameters.adaptiveThreshConstant = 10
         self.focal_length = focal_length
 
-    def get_side_length(self, corners):
+    def _get_side_length(self, corners):
         sides_list = []
         for i in range(len(corners[0]) - 1, -1, -1):
             corner1 = corners[0][i - 1]
@@ -28,43 +28,42 @@ class Tracker:
         side_length = sum(sides_list) / len(sides_list)
         return side_length
 
-    def get_focal_length(self, corners, distance, marker_length=MARKER_LENGTH):
-        p = self.get_side_length(corners)
-        f = p * distance / marker_length
-        return f
+    def _get_focal_length(self, corners, distance, marker_length=MARKER_LENGTH):
+        side_length = self._get_side_length(corners)
+        focal_length = side_length * distance / marker_length
+        return focal_length
 
-    def get_depth(self, corners, marker_length=MARKER_LENGTH):
-        depth = marker_length * self.focal_length / self.get_side_length(corners)
+    def _get_depth(self, corners, marker_length=MARKER_LENGTH):
+        depth = marker_length * self.focal_length / self._get_side_length(corners)
         return depth
 
-    def calibrate(self, rgb, distance):
+    def _get_markers(self, rgb):
         gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
         corners, ids, _ = aruco.detectMarkers(gray, self.aruco_dict, parameters=self.parameters)
-        width, _ = self.resolution
+        return corners, ids
+
+    def calibrate(self, rgb, distance):
+        corners, ids = self._get_markers(rgb)
         markers = []
         if np.all(ids != None):
             for i in range(len(corners)):
-                focal_length = self.get_focal_length(corners[i], distance)
-                print("Focal Length: {}".format(focal_length))
+                focal_length = self._get_focal_length(corners[i], distance)
         draw_markers(rgb, markers, corners)
+        return rgb, focal_length
 
-    def detect(self, rgb, depth, show=False):
-        gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
-        corners, ids, _ = aruco.detectMarkers(gray, self.aruco_dict, parameters=self.parameters)
+    def detect(self, rgb, depth):
+        corners, ids = self._get_markers(rgb)
         width, _ = self.resolution
         markers = []
         if np.all(ids != None):
             for i in range(len(corners)):
                 x = int(corners[i].mean(axis=1)[0][0])
-                y = int(corners[i].mean(axis=1)[0][1])
                 marker = {}
                 marker["id"] = ids[i]
                 marker["corners"] = corners[i]
-                marker["distanceToMarker"] = self.get_depth(corners[i])
+                marker["distanceToMarker"] = self._get_depth(corners[i])
                 marker["angleToMarker"] = round((x - (width / 2)) \
                                           * (self.fov / width), 2)
                 markers.append(marker)
         draw_markers(rgb, markers, corners)
-        if show:
-            cv2.imshow("tracker", rgb)
         return rgb, markers
