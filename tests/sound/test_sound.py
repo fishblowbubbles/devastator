@@ -22,4 +22,4 @@ if __name__ == "__main__":
         emotion, confidence = sentiment.detect(samples[:, 0])
         if emotion:
             print("Emotion: {:10}\tConfidence: {:5.2}\tDirection: {:5}"
-                    .format(emotion, confidence, direction))
+                    .format(emotion, float(confidence), direction))

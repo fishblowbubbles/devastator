@@ -98,6 +98,6 @@ def draw_detections(rgb, detections, names, colors=COLORS, font=FONT):
 def draw_markers(rgb, markers, corners, font=FONT):
     for marker in markers:
         x, y = int(marker["corners"][0][0][0]) + 5, int(marker["corners"][0][0][1]) - 5
-        s = "Dist.: {} m, Angle: {}".format(marker["distance"], marker["angle"])
+        s = "Dist.: {} m, Angle: {}".format(marker["distanceToMarker"], marker["angleToMarker"])
         cv2.putText(rgb, s, (x, y), font, 0.5, (0, 255, 0), 1)
     aruco.drawDetectedMarkers(rgb, corners)
