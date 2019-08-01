@@ -43,7 +43,7 @@ class KalmanFilter(object):
         self.Q = np.eye(self.n) if Q is None else Q # covariance of the process noise
         self.R = np.eye(self.n) if R is None else R # covariance of the observation noise
         self.P = np.eye(self.n) if P is None else P
-        self.x = np.zeros((self.n, 1)) if x0 is None else x0 # initialise states
+        self._x = np.zeros((self.n, 1)) if x0 is None else x0 # initialise states
 
         self.last_time = time()
 
@@ -54,6 +54,14 @@ class KalmanFilter(object):
         self.saturation_limits = kwds.get('saturation_limits', 
                                     np.tile(np.array([-1,1]),(self.r, 1))) # default
     
+    @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, x):
+        self._x = x
+
     def saturate_controller_outputs(self, u):
         u_clipped = np.clip(u, self.saturation_limits[:,0], self.saturation_limits[:,1])
         return u_clipped
@@ -67,7 +75,7 @@ class KalmanFilter(object):
         self.G = self.sysd.B
 
     def get_states(self):
-        return self.x
+        return self._x
 
     def predict(self, u=None):
         '''
@@ -77,22 +85,22 @@ class KalmanFilter(object):
         current_time = time()
         dt = current_time - self.last_time
         self.last_time = current_time
-        u = np.zeros((self.r, 1)) if u is None else self.xsaturate_controller_outputs(u)
+        u = np.zeros((self.r, 1)) if u is None else self.saturate_controller_outputs(u)
         self.update_discrete_model(dt)
-        self.x = np.dot(self.F, self.x) + np.dot(self.G, u)
+        self._x = np.dot(self.F, self._x) + np.dot(self.G, u)
         self.P = np.dot(np.dot(self.F, self.P), self.F.T) + self.Q
-        return self.x
+        return self._x
 
     def update(self, z):
         '''
         Updates the filter's internal states based on an observation of the system, z.
         '''
-        y = z - np.dot(self.H, self.x)
+        y = z - np.dot(self.H, self._x)
         S = self.R + np.dot(self.H, np.dot(self.P, self.H.T))
         K = np.dot(np.dot(self.P, self.H.T), np.linalg.inv(S))
-        self.x = self.x + np.dot(K, y)
+        self._x = self._x + np.dot(K, y)
         I = np.eye(self.n)
         self.P = np.dot(
             np.dot(I - np.dot(K, self.H), self.P), (I - np.dot(K, self.H)).T
         ) + np.dot(np.dot(K, self.R), K.T)
-        return self.x
+        return self._x

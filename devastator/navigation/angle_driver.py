@@ -11,9 +11,9 @@ import pickle
 import socket
 
 # local imports
-import kalman
-import physical_chassis as potato
-import controllers
+import navigation.kalman as kalman
+import navigation.physical_chassis as potato
+import navigation.controllers as controllers
 
 ## TODO: IMPLEMENT MANUAL CONTROL TRACKING FOR NO AUTO/MANUAL MODE SWITCHING TRANSIENT ##
 ##       THIS IS DONE BY SETTING THE CLIP POINTS TO THE MANUAL VALUE EXACTLY.          ##
