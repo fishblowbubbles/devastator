@@ -37,7 +37,7 @@ THRESHOLD = 0.1
 device = 'GPU'  # GPU
 labels = './custom.names'  # set to None if no labels
 cpu_extension = '/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so'
-model_xml = './YoloV2_18000.xml'
+model_xml = './YoloV2_13000.xml'
 model_bin = os.path.splitext(model_xml)[0] + ".bin"
 
 

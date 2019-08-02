@@ -301,8 +301,7 @@ def detect(rgb, d, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_giv
         # Validation bbox of detected object
         if obj['xmax'] > origin_im_size[1] or obj['ymax'] > origin_im_size[0] or obj['xmin'] < 0 or obj['ymin'] < 0:
             continue
-        color = (int(min(obj['class_id'] * 12.5, 255)),
-                 min(obj['class_id'] * 7, 255), min(obj['class_id'] * 5, 255))
+        color = (int(min(obj['class_id'] * 12.5, 255)), min(obj['class_id'] * 7, 255), min(obj['class_id'] * 5, 255))
         det_label = labels_map[obj['class_id']] if labels_map and len(labels_map) >= obj['class_id'] else \
             str(obj['class_id'])
 
@@ -323,7 +322,8 @@ def detect(rgb, d, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_giv
                detection["image"] = original_image[obj["ymin"]:obj["ymax"],obj["xmin"]:obj["xmax"]][...,::-1]
             others.append(detection)
             cv2.rectangle(frame, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), color, 2)
-            cv2.putText(frame, det_label + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %' , (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
+            cv2.putText(frame, det_label, (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
+            # cv2.putText(frame, det_label + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %' , (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
 
     object_len = {"Handgun": 0.2, "Hat": 0.2, "Jacket": 0.8, "K nife": 0.1, "Rifle": 0.7, "Sunglasses": 0.05,
                   "Police": 1.7, "Face": 0.2}
@@ -360,7 +360,8 @@ def detect(rgb, d, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_giv
             color = (0,255,0)
         obj = i["box"]
         cv2.rectangle(frame, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), color, 2)
-        cv2.putText(frame, i["label"] + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %' + ' ' + str(i["depth"]) + " m", (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
+        cv2.putText(frame, i["label"], (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
+        # cv2.putText(frame, i["label"] + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %' + ' ' + str(i["depth"]) + " m", (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
 
     return frame, people
 
@@ -375,7 +376,7 @@ def main():
     device = 'CPU'  # GPU
     labels = './custom.names'  # set to None if no labels
     cpu_extension = '/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so'
-    model_xml = './YoloV2_18000.xml'
+    model_xml = './YoloV2_13000.xml'
     model_bin = os.path.splitext(model_xml)[0] + ".bin"
 
     # ------------------------------------------- Loading model to the plugin -------------------------------------
