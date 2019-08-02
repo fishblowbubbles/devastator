@@ -1,12 +1,30 @@
+import sys
+from importlib import import_module
+sys.path.append('./../')
+
 import numpy as np
 from control import ss, sample_system, place, acker, lqr
 import navigation.kalman as kalman
+# kalman = import_module('.', package='kalman')
+# from devastator.navigation import kalman
 import asyncio
 import pickle
 import socket
-import uvloop
+
 from concurrent.futures import ThreadPoolExecutor
 from time import time
+import robot.helpers as helpers
+# helpers = import_module('.', package = 'robot.helpers')
+import warnings
+
+# cheat codes
+try:
+    import uvloop
+except ModuleNotFoundError:
+    warnings.warn('u suck coz u dont have uvloop')
+    UVLOOP_EXISTS = False
+else:
+    UVLOOP_EXISTS = True
 
 ### TODO ###
 # future work:
@@ -111,7 +129,7 @@ class FullStateFeedbackController(object):
         elif self._mode is 'manual':
             self._saturation_limits = np.zeros_like(self._auto_saturation_limits)
 
-        self.num_threads = kwds.get('n_threads', 2)
+        self.num_threads = kwds.get('n_threads', 3)
         self.pool = ThreadPoolExecutor(max_workers = self.num_threads)
         
         # kalman params
@@ -132,7 +150,7 @@ class FullStateFeedbackController(object):
             self.socks = {
                 'u_man' : socket.socket(),
                 'observation' : socket.socket(),
-                'u_out' : socket.socket()
+                'get_states' : socket.socket()
             }
         else:
             self.socks = socks
@@ -142,7 +160,22 @@ class FullStateFeedbackController(object):
             self.ports = {
                 'u_man' : 5678,
                 'observation' : 5679,
-                'u_out' : 5680
+                'get_states' : 5680
+            }
+
+        hosts = kwds.get('hosts', None)
+        if hosts is None:
+            self.hosts = {
+                'u_man' : 'localhost',
+                'observation' : 'localhost',
+                'u_out' : 'localhost',
+                'get_states' : 'localhost'
+            }
+
+        self._listen = {
+                'u_man' : 'localhost',
+                'observation' : 'localhost',
+                'get_states' : 'localhost'
             }
 
         for name, sock in self.socks.items():
@@ -150,7 +183,8 @@ class FullStateFeedbackController(object):
             sock.bind('localhost', ports[name])
         
         # asyncio loop constructor
-        uvloop.install() #go check this out!!
+        if UVLOOP_EXISTS:
+            uvloop.install() #go check this out!!
         self._loop = asyncio.get_event_loop()
         self._coros = []
 
@@ -161,6 +195,16 @@ class FullStateFeedbackController(object):
         if self.debug is True:
             print('\nTimeout = {} seconds\n'.format(self.timeout))
         
+        self.output_host = kwds.get('output_host', None)
+        self.output_port = kwds.get('output_port', None)
+        if self.output_host is None:
+            self.output_host = 'localhost'
+            warnings.warn('No output host specified, using localhost')
+        if self.output_port is None:
+            if self.debug is True:
+                raise KeyError("Specify 'output_port' in __init__ keywords!")
+            self.output_port = 12345
+            warnings.warn('No output host port specified, using port 12345.')
 
     ### getters and setters
 
@@ -295,85 +339,80 @@ class FullStateFeedbackController(object):
     def update_states(self, y):
         self.observer.update(y)
 
+    async def arecv_obj(self, connection, addr):
+        packets = []
+        while True:
+            packet = await self._loop.sock_recv(connnection, 1024)
+            if not packet:
+                break
+            packets.append(packet)
+        try:
+            obj = pickle.loads(b"".join(packets))
+            if self.debug is True:
+                print('Received an object of type {}'.format(type(obj)))
+            return obj
+        except _pickle.UnpicklingError:
+            warnings.warn('Object cannot be unpickled.')
+            return packets
+                
     # IO handlers
     async def handle_observation(self, conn, addr):
-        while True:
-            data = await self._loop.sock_recv(conn, 1024)
-            if not data:
-                break
+        try:
+            obj = await arecv_obj(conn)
+            assert isinstance(obj, dict), 'Object received is not a dictionary.'
+
+            y = obj.get('y', None)
+
+            if y is not None:
+                self.y = y
+                if self.debug is True:
+                    print('States updated. y = {}'.format(y))
             else:
-                try:
-                    unpkl = pickle.loads(data)
-                except _pickle.UnpicklingError:
-                    print('observation data cannot be unpickled...')
-                else:
-                    if isinstance(unpkl, dict):
-                        y = unpkl.get('y', None)
-                        if y is not None:
-                            self.y = y
-                            if self.debug is True:
-                                print('States updated. y = {}'.format(y))
-                    else:
-                        print('observation data is not a dictionary...')
-        if self.debug is True:
-            print('Connection closed: {}'.format(addr))
-        conn.close()
-    
+                warnings.warn("observation key 'y' not received.")
+        finally:
+            conn.close()
+            if self.debug is True:
+                print('Connection closed: {}'.format(addr))
+
     async def handle_manual_control(self, conn, addr):
         '''
         accepts a pickled dict containing manual inputs and mode commands
         '''
-        while True:
-            data = await self._loop.sock_recv(conn, 1024)
-            if not data:
-                break
-            else:
-                try:
-                    unpkl = pickle.loads(data) #should be a dictionary
-                except _pickle.UnpicklingError:
-                    if self.debug is True:
-                        print('Manual control data cannot be unpickled...')
-                else:
-                    if isinstance(unpkl, dict):
-                        if self.debug is True and len(unpkl) is not 0:
-                            print('Manual control raw data: {}'.format(y))
-                        u_man = unpkl.get('u_man', None)
-                        mode = unpkl.get('mode', None)
-                        if isinstance(u_man, (np.array, np.matrix)) and u_man.shape == (self.m, 1):
-                            self.u_man = u_man
-                            if self.debug is True:
-                                print('u_man updated: {}'.format(u_man))
-                        if mode is in ['manual', 'auto']:
-                            self.mode = mode
-                            if self.debug is True:
-                                print('mode updated: {}'.format(mode))
-                    elif self.debug is True:
-                        print('Manual control data is not a dictionary...')
-        if self.debug is True:
-            print('Connection closed: {}'.format(addr))
-        conn.close()
-    
-    async def handle_output(self, conn, addr):
-        while True:
-            start_time = time()
-            msg = pickle.dumps(self.u_man)
-            out_args = [conn, msg]
-            try:
-                await asyncio.wait_for(
-                    self._loop.sock_sendall,
-                    *out_args,
-                    timeout = self.timeout
-                )
-            except asyncio.TimeoutError:
+        success = False
+        try:
+            obj = await arecv_obj(conn, addr)
+            assert isinstance(obj, dict), 'Object received is not a dictionary.'
+
+            u_man = obj.get('u_man', None)
+            if u_man is not None:
+                assert isinstance(u_man, (np.array, np.matrix))
+                self.u_man = u_man
+                success = True
                 if self.debug is True:
-                    print("Connection timed out: {}".format(addr))
-                break
-            sleep_time = (1.0/self.max_update_frequency) - (time()-start_time)
-            if sleep_time > 0:
-                await asyncio.sleep(sleep_time) #dont update the romeo too fast!!
-        if self.debug is True:
-            print('Connection closed: {}'.format(addr))
-        conn.close()
+                    print('States updated. u_man = {}'.format(u_man))
+            
+            mode = obj.get('mode', None)
+            if mode is not None:
+                assert mode is 'manual' or mode is 'auto'
+                self.mode = mode
+                success = True
+                if self.debug is True:
+                    print('States updated. mode = {}'.format(mode))
+
+            if u_man is None and mode is None:
+                warnings.warn('Nothing was received.')
+
+        finally:
+            conn.close()
+            if self.debug is True:
+                print('Connection closed: {}'.format(addr))
+            return success
+
+    async def send_output(self, host, port):
+        client_args = [host, port]
+        success = await self._loop.run_in_executor(self.pool, helpers.connect_and_send, *client_args)
+        if success is False:
+            warnings.warn('output not sent successfully.')
 
     async def handle_get_request(self, conn, addr):
         '''
@@ -382,21 +421,38 @@ class FullStateFeedbackController(object):
         while True:
             pass
 
+
+
     # IO servers
     async def observation_server(self):
         '''
         receives a connection with measurements (d, theta) taken from the camera
         '''
-        while True:
-            conn, addr = await self._loop.sock_accept(self.sock)
-            if self.debug is True:
-                print('Opening observation_server connection: {}'.format(addr))
-            self._loop.create_task(self.echo_handler(conn, addr))
+        sockkey = 'y'
+        success_str = 'Opening observation_server connection from'
+        try:
+            while True:
+                conn, addr = await self._loop.sock_accept(self.socks[sockkey])
+                if self.debug is True:
+                    print(success_str + ' {}'.format(addr))
+                self._loop.create_task(self.echo_handler(conn, addr))
+        finally:
+            self.socks[sockkey].close()
     
     async def manual_control_server(self):
-        '''takes in manual commands from the app or xbox controller'''
-        while True:
-            pass
+        '''
+        takes in manual commands from the app or xbox controller
+        '''
+        sockkey = 'y'
+        success_str = 'Opening manual_control_server connection from'
+        try:
+            while True:
+                conn, addr = await self._loop.sock_accept(self.socks[sockkey])
+                if self.debug is True:
+                    print(success_str + ' {}'.format(addr))
+                self._loop.create_task(self.echo_handler(conn, addr))
+        finally:
+            self.socks[sockkey].close()
     
     async def output_client(self): 
         '''
@@ -404,7 +460,7 @@ class FullStateFeedbackController(object):
         timeout and sleep before retrying
         '''
         while True:
-            pass
+            await send_output(self.output_host, self.output_port)
     
     async def get_state_server(self): 
         '''
@@ -414,53 +470,26 @@ class FullStateFeedbackController(object):
             pass
         
     async def async_tasks(self):
-        self._coros.append()
         self.servers = {
             'u_man' : self.manual_control_server,
             'observation' : self.observation_server,
-            'u_out' : self.output_server
+            'u_out' : self.output_server,
+            'get_state' : self.get_state_server
         }
         # create tasks
         for name, server in self.servers.items():
-            self._loop.create_server(server, sock = self.socks[name])
+            self._coros.append(server())
     
     def run(self):
-        pass
-
-    # async def observation_handler(self, conn):
-    #     while True:
-    #         observation = await loop.sock_recv(conn, 1024)
-    #         if not observation:
-    #             break
-    #         try:
-    #             msg = pickle.loads(msg)
-    #             # update states based on new observation of system
-    #             self.update_states(observation) 
-    #         except pickle.UnpicklingError:
-    #             print('Unable to unpickle observations: {} in {}'.format(observation, self.__file__))
-
-    #         # await loop.sock_sendall(conn, msg)
-    #     conn.close()
-
-    # async def update_observation_server(self):
-    #     while True:
-    #         conn, addr = await loop.sock_accept(s)
-    #         loop.create_task(observation_handler(conn))
-    
-    # def run_update_observation_server(self):
-    #     try:
-    #         loop = asyncio.get_event_loop()
-    #         s = socket.socket()
-    #         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
-    #         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    #         s.setblocking(False)
-    #         s.bind((host, port))
-    #         s.listen(10)
-    #         loop.create_task(update_observation_server())
-    #         loop.run_forever()
-    #     finally:
-    #         loop.stop()
-    #         loop.close()
-
-if __name__ == "__main__":
-    pass
+        try:
+            c = self._loop.run_until_complete(self.async_tasks())
+            print(c)
+        finally:
+            self._pool.shutdown(wait=True)
+            for task in asyncio.Task.all_tasks(self._loop):
+                task.cancel()
+            self._loop.run_until_complete(self._loop.shutdown_asyncgens())
+            self._loop.stop()
+            self._loop.close()
+            sys.exit(0)
+        

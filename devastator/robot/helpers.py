@@ -26,19 +26,23 @@ def send_data(connection, data):
     try:
         connection.sendall(pickle.dumps(data))
         connection.shutdown(socket.SHUT_RDWR)
+        return True
     except ConnectionResetError:
         print("A connection was reset ...")
+        return False
     except BrokenPipeError:
         print("A pipe broke ...")
+        return False
 
 
 def connect_and_send(data, host, port):
     with socket.socket() as client:
         try:
             client.connect((host, port))
-            send_data(client, data)
+            return send_data(client, data)
         except ConnectionRefusedError:
             print("The connection was refused ...")
+            return False
 
 
 class ConfigFile:
