@@ -4,7 +4,7 @@ import face_recognition
 import cv2
 import numpy as np
 import math
-
+frametest = np.numarray
 def face_distance_to_conf(face_distance, face_match_threshold=0.47):
     if face_distance > face_match_threshold:
         range = (1.0 - face_match_threshold)
@@ -23,23 +23,50 @@ def load_known():
     face_encoding = face_recognition.face_encodings(image)[0]
     image2 = face_recognition.load_image_file("./known/download.jpg")
     face_encoding2 = face_recognition.face_encodings(image2)[0]
+    image3 = face_recognition.load_image_file("./known/amirul.jpg")
+    face_encoding3 = face_recognition.face_encodings(image3)[0]
+    image4 = face_recognition.load_image_file("./known/martin.jpg")
+    face_encoding4 = face_recognition.face_encodings(image4)[0]
+    image5 = face_recognition.load_image_file("./known/wesley.jpg")
+    face_encoding5 = face_recognition.face_encodings(image5)[0]
+    image6 = face_recognition.load_image_file("./known/Wenshu.jpg")
+    face_encoding6 = face_recognition.face_encodings(image6)[0]
+    image7 = face_recognition.load_image_file("./known/tingyu.jpg")
+    face_encoding7 = face_recognition.face_encodings(image7)[0]
 
 # Create arrays of known face encodings and their names
     known_face_encodings = [
     face_encoding,
-    face_encoding2
+    face_encoding2,
+    face_encoding3,
+    face_encoding4,
+    face_encoding5,
+    face_encoding6,
+    face_encoding7
     ]
     known_face_names = [
     "Yu Jin",
-    "Cheryl"
+    "Cheryl",
+    "Amirul",
+    "Martin",
+    "Weseley",
+    "Wen Shu",
+    "Ting Yu"
     ]
     
     return known_face_encodings, known_face_names
 
-def guess_who(known_face_encodings, known_face_names, thresh = 0.46):
+def guess_who(picture,known_face_encodings, known_face_names, thresh = 0.46):
     # video_capture = cv2.VideoCapture("example.png")
+
+    ###for testing
     video_capture = cv2.VideoCapture(0)
     ret, frame = video_capture.read()
+    # global frametest
+    # frametest = frame
+
+    # frame = picture #picture is the numpy array sent by robot
+
     # Grab a single frame of video
 
     # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
@@ -70,6 +97,6 @@ def guess_who(known_face_encodings, known_face_names, thresh = 0.46):
 
 
 enc, names = load_known()
-print(guess_who(enc, names))
-
+# print(guess_who(None,enc, names))
+# print(frametest)
 

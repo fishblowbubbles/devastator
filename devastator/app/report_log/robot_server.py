@@ -2,8 +2,6 @@
 
 import json
 from flask_cors import CORS
-from threading import Thread
-from concurrent.futures import ThreadPoolExecutor
 import socket, pickle
 
 #########################################################
