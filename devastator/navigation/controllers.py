@@ -1,27 +1,20 @@
 import sys
-from importlib import import_module
-sys.path.append('./../')
-
 import numpy as np
 from control import ss, sample_system, place, acker, lqr
 import navigation.kalman as kalman
-# kalman = import_module('.', package='kalman')
-# from devastator.navigation import kalman
 import asyncio
 import pickle
 import socket
 
 from concurrent.futures import ThreadPoolExecutor
-from time import time
-import robot.helpers as helpers
-# helpers = import_module('.', package = 'robot.helpers')
+from time import time, sleep
 import warnings
 
 # cheat codes
 try:
     import uvloop
-except ModuleNotFoundError:
-    warnings.warn('u suck coz u dont have uvloop')
+except Exception as e:
+    print("uvloop not installed! Defaulting to asyncio event loop.\n")
     UVLOOP_EXISTS = False
 else:
     UVLOOP_EXISTS = True
@@ -52,10 +45,6 @@ class FullStateFeedbackController(object):
         assert r == D.shape[1], "Num of cols in B and D must be the same."
         assert m == D.shape[0], "Num of rows in C and D must be the same."
 
-        self.integral_action = kwds.get('integral_action', False)
-        if self.integral_action is True:
-            A, B, C, D, n, m, r = self._augment_sys(A, B, C, D, n, m, r)
-
         self.A = A # continuous time state matrix 
         self.B = B # input matrix
         self.C = C # output matrix
@@ -64,16 +53,24 @@ class FullStateFeedbackController(object):
         self.m = m # num of outputs
         self.r = r # num of inputs
 
-        self.sysc = ss(self.A, self.B, self.C, self.D)
+        self.sys_orig = ss(self.A, self.B, self.C, self.D)
 
-        if self.debug is True:
-            print('n : {}'.format(self.n))
-            print('m : {}'.format(self.m))
-            print('r : {}'.format(self.r))
-            print('A :\n{}\n'.format(self.A))
-            print('B :\n{}\n'.format(self.B))
-            print('C :\n{}\n'.format(self.C))
-            print('D :\n{}\n'.format(self.D))
+        self.integral_action = kwds.get('integral_action', False)
+        if self.integral_action is True:
+            A_aug, B_aug, C_aug, D_aug, n_aug, m_aug, r_aug = self._augment_sys(A, B, C, D, n, m, r)
+
+            self.A_aug = A_aug # continuous time state matrix 
+            self.B_aug = B_aug # input matrix
+            self.C_aug = C_aug # output matrix
+            self.D_aug = D_aug # feedforward matrix
+            self.n = n_aug # num of states
+            self.m = m_aug # num of outputs
+            self.r = r_aug # num of inputs
+
+            self.sysc = ss(self.A_aug, self.B_aug, self.C_aug, self.D_aug)
+        
+        else:
+            self.sysc = ss(self.A, self.B, self.C, self.D)
 
         self.poles = kwds.get("poles", None)
 
@@ -86,11 +83,11 @@ class FullStateFeedbackController(object):
         self.gain_method = kwds.get("gain_method", 'lqr')
 
         if self.N is None:
-            LQR_args = (self.A, self.B, self.Q, self.R)
+            LQR_args = (self.sysc.A, self.sysc.B, self.Q, self.R)
         else:
-            LQR_args = (self.A, self.B, self.Q, self.R, self.N)
+            LQR_args = (self.sysc.A, self.sysc.B, self.Q, self.R, self.N)
 
-        place_args = (self.A, self.B, self.poles)
+        place_args = (self.sysc.A, self.sysc.B, self.poles)
 
         gm = { # user options for gain methods
             'pp' : (place, place_args), # pole placement, no repeated poles
@@ -113,12 +110,25 @@ class FullStateFeedbackController(object):
                 
             self.back_calc_weight = kwds.get("back_calc_weight", np.eye(self.m)) 
             self.Kt = self.back_calc_weight @ self.Kt
-            self.B_aug, self.D_aug = self._augment_BD(self.B, self.D, self.Kt)
+            self.r, self.B_aug, self.D_aug = self._augment_BD(self.r, self.sysc.B, self.sysc.D, self.Kt)
+            self.sysc = ss(self.sysc.A, self.B_aug, self.sysc.C, self.D_aug)
+        
+        if self.debug is True:
+            print('n : {}'.format(self.n))
+            print('m : {}'.format(self.m))
+            print('r : {}'.format(self.r))
+            print('A :\n{}\n'.format(self.sysc.A))
+            print('B :\n{}\n'.format(self.sysc.B))
+            print('C :\n{}\n'.format(self.sysc.C))
+            print('D :\n{}\n'.format(self.sysc.D))
+            print('B_aug :\n{}\n'.format(self.B_aug))
+            print('D_aug :\n{}\n'.format(self.D_aug))
+            
 
         # rows for each input.
         # each row specifies the [lower_limit, upper_limit] of saturation. 
         self._auto_saturation_limits = kwds.get("saturation_limits",
-                                    np.tile( np.array([-1,1]) , (self.r,1) )
+                                    np.tile( np.matrix([-1,1]) , (self.r,1) )
                                         )
         if self.debug is True:
             print('auto_sat_limits :\n{}\n'.format(self._auto_saturation_limits))
@@ -132,18 +142,27 @@ class FullStateFeedbackController(object):
         self.num_threads = kwds.get('n_threads', 3)
         self.pool = ThreadPoolExecutor(max_workers = self.num_threads)
         
+        # kalman_H = kwds.get('observation_model', None)
+        # if kalman_H is None:
+        #     warnings.warn('No observation model specified. Assuming only the output y of the system can be observed...')
+        #     kalman_H = self.sysc.C
+        #     kalman_D
+        # elif self.debug is True:
+
+
         # kalman params
         kalman_kwds = {
-            'A' : self.A,
-            'B' : self.B_aug,
-            'H' : self.C,
-            'D' : self.D_aug,
+            'debug' : True,
+            'A' : self.sysc.A,
+            'B' : self.sysc.B,
+            'H' : self.sysc.C,
+            'D' : self.sysc.D,
             'process_covariance' : kwds.get('process_covariance', None),
             'measurement_covariance' : kwds.get('measurement_covariance', None),
-            'saturation_limits' : self._saturation_limits
+            'saturation_limits' : self._saturation_limits,
         }
         self.observer = kalman.KalmanFilter(**kalman_kwds)
-        self.prev_u_aug = np.zeros((1, self.r*2))
+        self.prev_u_aug = np.matrix(np.zeros((1, self.r)).reshape((self.r,1)))
 
         socks = kwds.get('socks', None)
         if socks is None:
@@ -162,6 +181,7 @@ class FullStateFeedbackController(object):
                 'observation' : 5679,
                 'get_states' : 5680
             }
+        else: self.ports = ports
 
         hosts = kwds.get('hosts', None)
         if hosts is None:
@@ -171,6 +191,7 @@ class FullStateFeedbackController(object):
                 'u_out' : 'localhost',
                 'get_states' : 'localhost'
             }
+        else: self.hosts = hosts
 
         self._listen = {
                 'u_man' : 'localhost',
@@ -180,7 +201,8 @@ class FullStateFeedbackController(object):
 
         for name, sock in self.socks.items():
             sock.setblocking(False)
-            sock.bind('localhost', ports[name])
+            sock.bind(('localhost', self.ports[name]))
+            sock.listen()
         
         # asyncio loop constructor
         if UVLOOP_EXISTS:
@@ -205,6 +227,44 @@ class FullStateFeedbackController(object):
                 raise KeyError("Specify 'output_port' in __init__ keywords!")
             self.output_port = 12345
             warnings.warn('No output host port specified, using port 12345.')
+        
+        self._output_freq_limit = kwds.get('output_freq_limit', None)
+        if self._output_freq_limit is None:
+            warnings.warn("Output frequency limit was not set. Defaulting to 200Hz. Set using 'output_freq_limit' in **kwds")
+            self._output_freq_limit = 200
+        elif self.debug is True:
+            print("Output frequency limit was set to {}Hz".format(self._output_freq_limit))
+        self.output_sleep_time = 1.0/self._output_freq_limit
+
+        self.input_conn_reset_time = kwds.get('input_conn_reset_time', None)
+        if self.input_conn_reset_time is None:
+            warnings.warn("Input connection watchdog timeout was not set. Defaulting to 0.3 seconds. Set using 'input_conn_reset_time' in **kwds")
+            self.input_conn_reset_time = 0.3
+        elif self.debug is True:
+            print("Input watchdog timeout set to {} seconds.".format(self.input_conn_reset_time))
+        
+        
+        self._predict_freq_limit = kwds.get('predict_freq_limit', None)
+        if self._predict_freq_limit is None:
+            warnings.warn("Prediction frequency limit was not set. Defaulting to 250Hz. Set using 'predict_freq_limit' in **kwds")
+            self._predict_freq_limit = 250
+        elif self.debug is True:
+            print("Prediction frequency limit was set to {}Hz".format(self._predict_freq_limit))
+
+        
+        self.observation_conn_reset_time = kwds.get('observation_conn_reset_time', None)
+        if self.observation_conn_reset_time is None:
+            warnings.warn("Observation connection watchdog timeout was not set. Defaulting to 0.3 seconds. Set using 'observation_conn_reset_time' in **kwds")
+            self.input_conn_reset_time = 0.1
+        elif self.debug is True:
+            print("Observation watchdog timeout set to {} seconds.".format(self.observation_conn_reset_time))
+
+        self._prev_input_time = time()
+        self._prev_observation_time = time()
+
+
+        if self.debug is True:
+            print('\n\nCONTROLLER SUCCESSFULLY INITIALISED!\n\n\n')
 
     ### getters and setters
 
@@ -231,7 +291,7 @@ class FullStateFeedbackController(object):
     
     @u_man.setter
     def u_man(self, u_man):
-        if u_man.shape is (self.m,1):
+        if u_man.shape is self._u_man.shape:
             self._u_man = u_man
 
     @property
@@ -266,6 +326,16 @@ class FullStateFeedbackController(object):
         self._y = y, time()
         if y is not None:
             self.update_states(y)
+    
+    @property
+    def output_freq_limit(self):
+        return self._output_freq_limit
+    
+    @output_freq_limit.setter
+    def output_freq_limit(self, limit):
+        if isinstance(limit, (int, float)):
+            self._output_freq_limit = limit
+            self.output_sleep_time = 1.0/self._output_freq_limit
 
     def _augment_sys(self, A, B, C, D, n, m, r):
         A_aug = np.vstack((A,-C))
@@ -275,7 +345,7 @@ class FullStateFeedbackController(object):
         n += m
         return A_aug, B_aug, C_aug, D, n, m, r
 
-    def _augment_BD(self, B, D, Kt):
+    def _augment_BD(self, r, B, D, Kt):
         '''
         B_aug = 
         [
@@ -284,24 +354,14 @@ class FullStateFeedbackController(object):
         ]
         where Kt is the pseudoinverse of the integral gain Ki
         '''
-        
+        r_new = r*2
         L = B
         R = np.vstack((np.zeros((B.shape[0]-Kt.shape[0], Kt.shape[1])), Kt))
         B_aug = np.hstack((L,R))
         D_aug = np.hstack((D,np.zeros((D.shape[0], B_aug.shape[1]-D.shape[1]))))
         if self.debug is True:
             print('B_aug :\n{}\n'.format(B_aug))
-        return B_aug, D_aug
-
-    def __call__(self, *args, **kwds):
-        '''
-        returns the continuous time system if no dt is given.
-        returns the discrete time system if dt is given.
-        '''
-        dt = kwds.get('dt', None)
-        if dt is not None:
-            return sample_system(self.sysc, dt, method = 'zoh') #discrete time
-        return self.sysc
+        return r_new, B_aug, D_aug
     
     ### pole placement methods ###
     def LQR(self, *args):
@@ -317,7 +377,7 @@ class FullStateFeedbackController(object):
         x = self.observer.predict(self.prev_u_aug)
         u = -self.K @ x
         if self.mode is 'auto':
-            self._saturation_limits = self._auto_saturation.limits
+            self._saturation_limits = self._auto_saturation_limits
         elif self.mode is 'manual':
             self._saturation_limits = np.tile(self.u_man, (1,2))
         u_sat = np.clip(
@@ -330,9 +390,16 @@ class FullStateFeedbackController(object):
         return u_aug
     
     async def predict_states(self):
+        print('Starting predict_states...')
         while True:
-            self.observer.x = await \
-                self._loop.run_in_executor(self.pool, self.observer.predict, self.u) # run in pool
+            print('predicting states')
+
+            # await self._loop.run_in_executor(self.pool, sleep, 0.1)
+
+            # self.observer.x = await self._loop.run_in_executor(self.pool, self.observer.predict, self.u) # run in pool
+            
+            self.observer.x = self.observer.predict(self.prev_u_aug)
+            print('prediction done')
             # self.observer.x = self.observer.predict(u = self.u) # run synchronously, which may not be so bad
     
     ### input sensor readings ###
@@ -342,7 +409,7 @@ class FullStateFeedbackController(object):
     async def arecv_obj(self, connection, addr):
         packets = []
         while True:
-            packet = await self._loop.sock_recv(connnection, 1024)
+            packet = await self._loop.sock_recv(connection, 1024)
             if not packet:
                 break
             packets.append(packet)
@@ -351,19 +418,37 @@ class FullStateFeedbackController(object):
             if self.debug is True:
                 print('Received an object of type {}'.format(type(obj)))
             return obj
-        except _pickle.UnpicklingError:
-            warnings.warn('Object cannot be unpickled.')
+        except pickle.UnpicklingError:
+            warnings.warn('Object cannot be unpickled. Raw inp: {}'.format(packets))
             return packets
+        else:
+            self._prev_input_time = time() #reset the input watchdog timer
+    
+    async def arecv_dict(self, conn, addr):
+        obj = await self.arecv_obj(conn, addr)
+        if isinstance(obj, dict):
+            return obj
+        else:
+            if self.debug is True:
+                warnings.warn('Object received is not a dictionary.')
+            return {}
                 
     # IO handlers
     async def handle_observation(self, conn, addr):
         try:
-            obj = await arecv_obj(conn)
-            assert isinstance(obj, dict), 'Object received is not a dictionary.'
-
+            obj = await self.arecv_dict(conn, addr)
+            '''
+            obj = {
+                'y' : np.array([
+                    [d],
+                    [theta]
+                ])
+            }
+            '''
             y = obj.get('y', None)
 
-            if y is not None:
+            if isinstance(y, np.matrix):
+                self._prev_observation_time = time() #reset the observation watchdog timer
                 self.y = y
                 if self.debug is True:
                     print('States updated. y = {}'.format(y))
@@ -373,6 +458,7 @@ class FullStateFeedbackController(object):
             conn.close()
             if self.debug is True:
                 print('Connection closed: {}'.format(addr))
+    
 
     async def handle_manual_control(self, conn, addr):
         '''
@@ -380,12 +466,19 @@ class FullStateFeedbackController(object):
         '''
         success = False
         try:
-            obj = await arecv_obj(conn, addr)
-            assert isinstance(obj, dict), 'Object received is not a dictionary.'
-
+            obj = await self.arecv_dict(conn, addr)
+            '''
+            obj = {
+                'u_man' : np.array([
+                    [u_left],
+                    [u_right]
+                ]),
+                'mode' : 'manual'
+            }
+            '''
             u_man = obj.get('u_man', None)
             if u_man is not None:
-                assert isinstance(u_man, (np.array, np.matrix))
+                assert isinstance(u_man, np.matrix)
                 self.u_man = u_man
                 success = True
                 if self.debug is True:
@@ -408,11 +501,17 @@ class FullStateFeedbackController(object):
                 print('Connection closed: {}'.format(addr))
             return success
 
-    async def send_output(self, host, port):
-        client_args = [host, port]
-        success = await self._loop.run_in_executor(self.pool, helpers.connect_and_send, *client_args)
-        if success is False:
-            warnings.warn('output not sent successfully.')
+    async def aconnect_and_send(self, get_data_func, host, port):
+        with socket.socket() as s:
+            s.setblocking(False)
+            if self.debug is True: print('Awaiting output connection.')
+            await self._loop.sock_connect(s, (host, port))
+            data = get_data_func()
+            pkl = pickle.dumps(data)
+            if self.debug is True: print('Output connection established.\nSending data: {}'.format(data))
+            await self._loop.sock_sendall(s, data)
+            if self.debug is True: print('Output sent')
+            return True
 
     async def handle_get_request(self, conn, addr):
         '''
@@ -421,21 +520,65 @@ class FullStateFeedbackController(object):
         while True:
             pass
 
-
+    async def input_watchdog(self):
+        print_every = 5
+        count = 0
+        if self.debug is True: print("Starting input watchdog in 3...")
+        await asyncio.sleep(1)
+        if self.debug is True: print("Starting input watchdog in 2...")
+        await asyncio.sleep(1)
+        if self.debug is True: print("Starting input watchdog in 1...")
+        await asyncio.sleep(1)
+        if self.debug is True: print("Input watchdog started.")
+        
+        while True:
+            time_since_last_inp = time() - self._prev_input_time
+            if time_since_last_inp > self.input_conn_reset_time:
+                self.u_man = np.zeros_like(self.u_man)
+                if self.debug is True:
+                    if count is 0: print('No input connection! Time since last input = {:.1f}s'.format(time_since_last_inp))
+                count = (count + 1) % print_every
+            else:
+                count = 0
+            await asyncio.sleep(0.05) #check at most every 0.05 seconds
+    
+    async def observation_watchdog(self):
+        print_every = 5
+        count = 0
+        if self.debug is True: print("Starting observation watchdog in 3...")
+        await asyncio.sleep(1)
+        if self.debug is True: print("Starting observation watchdog in 2...")
+        await asyncio.sleep(1)
+        if self.debug is True: print("Starting observation watchdog in 1...")
+        await asyncio.sleep(1)
+        if self.debug is True: print("Observation watchdog started.")
+        
+        while True:
+            time_since_last_inp = time() - self._prev_observation_time
+            if time_since_last_inp > self.observation_conn_reset_time:
+                self.mode = 'manual'
+                if self.debug is True:
+                    if count is 0: print('No observation connection! Time since last input = {:.1f}s'.format(time_since_last_inp))
+                count = (count + 1) % print_every
+            else:
+                count = 0
+            await asyncio.sleep(0.05) #check at most every 0.05 seconds
 
     # IO servers
     async def observation_server(self):
         '''
         receives a connection with measurements (d, theta) taken from the camera
         '''
-        sockkey = 'y'
+        sockkey = 'observation'
         success_str = 'Opening observation_server connection from'
+        handler = self.handle_observation
+        if self.debug is True: print('Starting {} server using {} socket'.format(sockkey, self.socks[sockkey]))
         try:
             while True:
                 conn, addr = await self._loop.sock_accept(self.socks[sockkey])
                 if self.debug is True:
                     print(success_str + ' {}'.format(addr))
-                self._loop.create_task(self.echo_handler(conn, addr))
+                self._loop.create_task(handler(conn, addr))
         finally:
             self.socks[sockkey].close()
     
@@ -443,53 +586,84 @@ class FullStateFeedbackController(object):
         '''
         takes in manual commands from the app or xbox controller
         '''
-        sockkey = 'y'
+        sockkey = 'u_man'
         success_str = 'Opening manual_control_server connection from'
+        handler = self.handle_manual_control
+        if self.debug is True: print('Starting {} server using {} socket'.format(sockkey, self.socks[sockkey]))
         try:
             while True:
                 conn, addr = await self._loop.sock_accept(self.socks[sockkey])
                 if self.debug is True:
                     print(success_str + ' {}'.format(addr))
-                self._loop.create_task(self.echo_handler(conn, addr))
+                self._loop.create_task(handler(conn, addr))
         finally:
             self.socks[sockkey].close()
     
+
     async def output_client(self): 
         '''
         tries to connect to the romeo to give it motor commands
         timeout and sleep before retrying
         '''
+        if self.debug is True: print('Starting output client at host={}, port={}'.format(self.output_host, self.output_port))
+        
+        def get_u_out():
+            # output = {
+            #     'u_out' : self.u_out
+            # }
+            output = {}
+            return output
+
         while True:
-            await send_output(self.output_host, self.output_port)
-    
+            # await asyncio.sleep(0.3)
+            start_time = time()
+            await self.aconnect_and_send(get_u_out, self.output_host, self.output_port)
+            time_awaited = time() - start_time
+            extra_time = self.output_sleep_time - time_awaited
+            if extra_time > 0:
+                await asyncio.sleep(extra_time) #limits the output frequency
+            else:
+                if self.debug is True: warnings.warn('Actual output frequency slower than output_freq_limit')
+
     async def get_state_server(self): 
         '''
         server to handle random requests to get robot states/properties. no setting of properties are allowed.
         '''
-        while True:
-            pass
+        pass
         
     async def async_tasks(self):
         self.servers = {
             'u_man' : self.manual_control_server,
             'observation' : self.observation_server,
-            'u_out' : self.output_server,
-            'get_state' : self.get_state_server
+            'u_out' : self.output_client,
+            # 'get_state' : self.get_state_server,
         }
         # create tasks
         for name, server in self.servers.items():
-            self._coros.append(server())
+            if self.debug is True: print('Starting {} coroutine'.format(name))
+            self._coros.append(self._loop.create_task(server()))
+
+        self._coros.append(self._loop.create_task(self.input_watchdog()))
+        self._coros.append(self._loop.create_task(self.observation_watchdog()))
+        self._coros.append(self._loop.create_task(self.predict_states()))
+
+        await asyncio.wait(self._coros)
+        return self._coros
     
     def run(self):
         try:
+            if self.debug is True: print('Event loop starting ...')
+            
             c = self._loop.run_until_complete(self.async_tasks())
             print(c)
         finally:
-            self._pool.shutdown(wait=True)
+            if self.debug is True: print('Closing everything ...')
+            self.pool.shutdown(wait=True)
             for task in asyncio.Task.all_tasks(self._loop):
                 task.cancel()
             self._loop.run_until_complete(self._loop.shutdown_asyncgens())
             self._loop.stop()
             self._loop.close()
+            if self.debug is True: print('Everything closed.')
             sys.exit(0)
         
