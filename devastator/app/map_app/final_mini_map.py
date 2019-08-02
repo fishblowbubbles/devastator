@@ -41,16 +41,27 @@ class Robot():
 
     def detected_person(self, information):
         marker = makeSprite("person_marker.png")
-        for i in range(len(information["objectsDetected"])):
-                # print(information["objectsDetected"][i])
-            if information["objectsDetected"][i] == "SUSPECT":
-                marker = makeSprite("suspect_marker.png")
-
-            elif information["objectsDetected"][i] == "PERSON":
-                marker = makeSprite("person_marker.png")
-
-            elif information["objectsDetected"][i] == "THREAT":
+        for i in information["objectsDetected"]:
+            ###>1 is threat
+            ###>0.2 suspect
+            ##<0.2 is Person
+            if i["danger_score"] > 1:
                 marker = makeSprite("threat_marker.png")
+            elif 0.2 < i["danger_score"] < 1:
+                marker = makeSprite("suspect_marker.png")
+            else:
+                marker = makeSprite("person_marker.png")
+        # for i in range(len(information["objectsDetected"])):
+        #         # print(information["objectsDetected"][i])
+        #
+        #     if information["objectsDetected"][i] == "SUSPECT":
+        #         marker = makeSprite("suspect_marker.png")
+        #
+        #     elif information["objectsDetected"][i] == "PERSON":
+        #         marker = makeSprite("person_marker.png")
+        #
+        #     elif information["objectsDetected"][i] == "THREAT":
+        #         marker = makeSprite("threat_marker.png")
 
             distance_from_person = information["distanceToObject"][i]
             # print(distance_from_person)

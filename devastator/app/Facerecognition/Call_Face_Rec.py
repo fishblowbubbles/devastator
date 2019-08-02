@@ -60,12 +60,12 @@ def guess_who(picture,known_face_encodings, known_face_names, thresh = 0.46):
     # video_capture = cv2.VideoCapture("example.png")
 
     ###for testing
-    video_capture = cv2.VideoCapture(0)
-    ret, frame = video_capture.read()
+    # video_capture = cv2.VideoCapture(0)
+    # ret, frame = video_capture.read()
     # global frametest
     # frametest = frame
 
-    # frame = picture #picture is the numpy array sent by robot
+    frame = picture #picture is the numpy array sent by robot
 
     # Grab a single frame of video
 
