@@ -17,3 +17,6 @@ devastator/sound/vokaturi/__pycache__
 devastator/vision/__pycache__
 devastator/vision/darknet/__pycache__/
 devastator/navigation/__pycache__
+
+YoloV2_18000.bin
+YoloV2_18000.xml

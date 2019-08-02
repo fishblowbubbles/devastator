@@ -9,13 +9,11 @@ THRESHOLD = 0.95
 
 
 class Sentiment:
-    def __init__(self, emotions=EMOTIONS, filename=".tmp/audio.wav"):
+    def __init__(self, emotions=EMOTIONS):
         self.emotions = emotions
-        self.filename = filename
 
     def detect(self, samples, rate=respeaker.RATE):
-        wavfile.write(self.filename, rate, samples)
-        prediction, confidence = vokaturi_func(self.filename)
+        prediction, confidence = vokaturi_func(samples, rate)
         emotion = self.emotions[prediction]
         return emotion, confidence
 

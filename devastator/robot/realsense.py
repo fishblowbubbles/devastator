@@ -52,6 +52,7 @@ class D435i():
 
     def run(self):
         server = Thread(target=self._start_server)
+        server.daemon = True
         server.start()
         try:
             while True:

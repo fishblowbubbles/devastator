@@ -4,8 +4,7 @@ import scipy.io.wavfile as wavfile
 from sound.vokaturi import Vokaturi
 
 
-def vokaturi_func(filename):
-    rate, samples = wavfile.read(filename)
+def vokaturi_func(samples, rate):
     buffer_length = len(samples)
     c_buffer = Vokaturi.SampleArrayC(buffer_length)
 

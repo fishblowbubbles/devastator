@@ -2,8 +2,6 @@ import argparse
 import sys
 
 sys.path.append("./devastator")
-sys.path.remove("/opt/intel/openvino_2019.2.242/python/python3.5")
-sys.path.remove("/opt/intel/openvino_2019.2.242/python/python3")
 
 import cv2
 

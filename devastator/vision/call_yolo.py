@@ -1,20 +1,32 @@
-from __future__ import print_function, division
+from __future__ import division, print_function
 
+import math
 import os
+import pickle
+import socket
 import sys
-
-sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
-from argparse import ArgumentParser, SUPPRESS
+from argparse import SUPPRESS, ArgumentParser
+from datetime import datetime
 from math import exp as exp
 from time import time
-import numpy as np
-import cv2
-import socket
-import pickle
-import math
-from datetime import datetime
+
+sys.path.append('/opt/intel/openvino_2019.2.242/python/python3.5')
+sys.path.append("/opt/intel/openvino_2019.2.242/python/python3")
+
 from openvino.inference_engine import IENetwork, IEPlugin
+
+sys.path.remove('/opt/intel/openvino_2019.2.242/python/python3.5')
+sys.path.remove("/opt/intel/openvino_2019.2.242/python/python3")
+
+import cv2
+import numpy as np
+
 from robot.helpers import recv_obj
+
+# sys.path.append("/opt/intel/openvino/inference_engine/lib/intel64")
+
+# sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+
 
 
 def build_argparser():
@@ -236,17 +248,17 @@ def prettyprint(detections):
     print(string)
 
 
-def detect(rgb, d, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_given=False):
+def detect(rgb, d, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_given=True):
     # if depth_given:
     #     rgb, d = frame[:, :, :3].astype(np.uint8), frame[:, :, 3]
     #     rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
     #     frame = np.array(rgb)
-    #     depth = np.array(d)
-    #     v_deg_per_pix = 42.5 / 720
-    #     h_deg_per_pix = 69.4 / 1280
+    depth = np.array(d)
+    v_deg_per_pix = 42.5 / 720
+    h_deg_per_pix = 69.4 / 1280
 
     frame = np.array(rgb)
-    d = np.array(d)
+    # d = np.array(d)
 
     input_blob = next(iter(net.inputs))
     n, c, h, w = net.inputs[input_blob].shape
@@ -297,8 +309,8 @@ def detect(rgb, d, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_giv
         detection = {}
         detection["label"] = det_label
         detection["box"] = obj
-        # if depth_given:
-        #   detection["depth"] = depth[int(detection["coordinates"][1])][int(detection["coordinates"][0])]/1000
+
+        labels_to_save = set(["Face", "Rifle", "Handgun", "Knife"])
 
         if detection["label"] == "Person":
             detection["equip"] = []
@@ -307,7 +319,11 @@ def detect(rgb, d, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_giv
             detection["h_angle"] = round((((obj["xmax"] + obj["xmin"]) / 2) - 640) * (87 / 1280), 2)
             people.append(detection)
         else:
+            if detection["label"] in labels_to_save:
+               detection["image"] = original_image[obj["ymin"]:obj["ymax"],obj["xmin"]:obj["xmax"]][...,::-1]
             others.append(detection)
+            cv2.rectangle(frame, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), color, 2)
+            cv2.putText(frame, det_label + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %' , (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
 
     object_len = {"Handgun": 0.2, "Hat": 0.2, "Jacket": 0.8, "K nife": 0.1, "Rifle": 0.7, "Sunglasses": 0.05,
                   "Police": 1.7, "Face": 0.2}
@@ -334,7 +350,19 @@ def detect(rgb, d, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_giv
             people[likely]["equip"].append(i)
             people[likely]["danger_score"] = people[likely]["danger_score"] + i["box"]["confidence"] * danger_weights[
                 i["label"]]
-    return people
+
+    for i in people:
+        if i["danger_score"] > 1:
+            color = (0,0,255)
+        elif i["danger_score"] > 0.2:
+            color = (0,165,255)
+        else:
+            color = (0,255,0)
+        obj = i["box"]
+        cv2.rectangle(frame, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), color, 2)
+        cv2.putText(frame, i["label"] + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %' + ' ' + str(i["depth"]) + " m", (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
+
+    return frame, people
 
 
 def main():

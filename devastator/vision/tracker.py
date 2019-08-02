@@ -6,12 +6,13 @@ from robot import realsense
 from robot.helpers import get_data
 from vision.helpers import draw_markers, split_rgbd
 
-MARKER_LENGTH = 15.5    # CM
-FOCAL_LENGTH  = 9.14715 # CM
+MARKER_LENGTH = 15.5    # cm
+FOCAL_LENGTH  = 9.14715 # cm
 
 
 class Tracker:
-    def __init__(self, resolution=realsense.RESOLUTION, fov=realsense.FOV, focal_length=FOCAL_LENGTH):
+    def __init__(self, resolution=realsense.RESOLUTION, 
+                 fov=realsense.FOV, focal_length=FOCAL_LENGTH):
         self.resolution, self.fov = resolution, fov
         self.aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
         self.parameters = aruco.DetectorParameters_create()
@@ -59,11 +60,12 @@ class Tracker:
             for i in range(len(corners)):
                 x = int(corners[i].mean(axis=1)[0][0])
                 marker = {}
-                marker["id"] = ids[i]
+                marker["id"] = ids[i][0]
                 marker["corners"] = corners[i]
                 marker["distanceToMarker"] = self._get_depth(corners[i])
                 marker["angleToMarker"] = round((x - (width / 2)) \
                                           * (self.fov / width), 2)
+                marker["objectsDetected"] = []
                 markers.append(marker)
         draw_markers(rgb, markers, corners)
         return rgb, markers
