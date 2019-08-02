@@ -1,10 +1,8 @@
 import sys
-sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 import timeit
 import face_recognition
 import cv2
 import numpy as np
-import pyrealsense2 as rs
 import math
 
 def face_distance_to_conf(face_distance, face_match_threshold=0.47):
@@ -39,11 +37,8 @@ def load_known():
     return known_face_encodings, known_face_names
 
 def guess_who(known_face_encodings, known_face_names, thresh = 0.46):
-
-'''
-returns  -1 confidence and unknown if the faces are below 0.46 confidence
-'''
-    video_capture = cv2.VideoCapture("example.png")
+    # video_capture = cv2.VideoCapture("example.png")
+    video_capture = cv2.VideoCapture(0)
     ret, frame = video_capture.read()
     # Grab a single frame of video
 

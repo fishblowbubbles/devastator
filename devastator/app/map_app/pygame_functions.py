@@ -76,7 +76,7 @@ class Background():
         self.tileHeight = self.tiles[0][0].get_height()
         screen.blit(self.tiles[0][0], [0, 0])
         ### below to render the button in the app
-        screen.blit(override_button,(200,50))
+        # screen.blit(override_button,(200,50))
         pygame.display.flip()
         self.surface = screen.copy()
 

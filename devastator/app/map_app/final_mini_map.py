@@ -1,7 +1,7 @@
 import pygame
 import socket
-from pygame_functions import *
-from helpers import *
+from devastator.app.map_app.pygame_functions import *
+from devastator.app.map_app.helpers import *
 
 HOST = "192.168.1.136"
 # HOST = "localhost"
