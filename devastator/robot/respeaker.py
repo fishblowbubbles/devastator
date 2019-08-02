@@ -13,7 +13,7 @@ from robot.helpers import recv_obj, send_data
 from robot.micarray import tuning
 
 HOST = "localhost"
-PORT = 5050
+PORT = int(np.random.rand() * 1000) + 6000
 
 DEVICE_NAME = "ReSpeaker 4 Mic Array (UAC1.0)"
 
@@ -78,6 +78,7 @@ class ReSpeaker:
 
     def run(self):
         server = Thread(target=self._start_server)
+        server.daemon = True
         server.start()
         try:
             while True:

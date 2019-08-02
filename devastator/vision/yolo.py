@@ -34,7 +34,7 @@ THRESHOLD = 0.1
 #         return rgb, detections
 
 
-device = 'GPU'  # GPU
+device = 'CPU'  # GPU
 labels = './custom.names'  # set to None if no labels
 cpu_extension = '/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so'
 model_xml = './YoloV2_13000.xml'

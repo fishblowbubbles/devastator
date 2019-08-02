@@ -53,6 +53,7 @@ import argparse
 import os
 import sys
 import time
+from collections import defaultdict
 from datetime import datetime
 from multiprocessing import Process
 
@@ -80,7 +81,7 @@ if __name__ == "__main__":
 
     d435i = realsense.D435i()
 
-    # yolov3 = YoloV3()
+    yolov3 = YoloV3()
     tracker = Tracker()
     sentiment = Sentiment()
     gunshot = Gunshot()
@@ -94,7 +95,7 @@ if __name__ == "__main__":
         print("Starting {} ...".format(name))
         process.start()
 
-    time.sleep(2)
+    time.sleep(5)
 
     try:
         delay = int(100 / realsense.FPS)
@@ -120,14 +121,41 @@ if __name__ == "__main__":
 
             rgb, depth = split_rgbd(frames)
             rgb, markers = tracker.detect(rgb, depth)
-            # rgb, detections = yolov3.detect(rgb, depth)
+            rgb, detections = yolov3.detect(rgb, depth)
 
             print("Markers: {}".format(markers))
-            # print("Detections: {}".format(detections))
+            print("Detections: {}".format(detections))
 
-            # marker = markers[route[index]]
             if markers:
-                connect_and_send(markers[0], target_host, target_port)
+                marker = markers[route[index]]
+                marker["objectsDetected"] = detections
+                connect_and_send(marker, host="192.168.1.136", port=8998)
+            connect_and_send(detections, host="192.168.1.136", port=8888)
+
+            """
+            objects_of_interest = defaultdict(int)
+            if detections:
+                for person in detections:
+                    for e in person["equip"]:
+                        if e["label"] == "Face": continue
+                        objects_of_interest[e["label"]] += 1
+
+            objects_of_interest = ["{}: {}".format(label, count) for label, count in objects_of_interest.items()]
+            objects_of_interest.append("Person: {}".format(len(detections)))
+            objects_of_interest = "<p/>".join(objects_of_interest)
+            
+            data = {
+                str(idx): {
+                    "Time_Stamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "Threat_Direction": "Sound direction",
+                    "Emotions_Present": emotion,
+                    "Gunshots": str(is_gunshot),
+                    "Objects_Of_Interest": objects_of_interest,
+                    "Persons_Detected": str(len(detections)),
+                    "Guns_Model": "Rifle"
+                }
+            }
+            """
 
             cv2.imshow("devastator", rgb)
             if cv2.waitKey(delay) == ord("q"):
