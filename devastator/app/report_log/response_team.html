@@ -22,11 +22,12 @@
       <thead>
         <tr>
             <th>Time Stamp</th>
-            <th>Threat Directions</th>
-            <th>Emotions Present</th>
-            <th>Gunshots</th>
-            <th>Objects Of Interest</th>
-            <th>People Detected</th>
+            <th>Status of Targets</th>
+            <th>Detected Emotions</th>
+            <th>Presence of Gunshots</th>
+            <th>Direction of Gunshots</th>
+            <th>Objects of Interest</th>
+            <th>Identity of Targets</th>
             <th>Gun Models Detected</th>
         </tr>
       </thead>
@@ -79,9 +80,10 @@ setInterval( function () {
       // You could also use an ajax property on the data table initialization
       $('#example').dataTable().fnAddData( [
         customer.Time_Stamp,
-        customer.Threat_Direction,
+        customer.Status_Targets,
         customer.Emotions_Present,
         customer.Gunshots,
+        customer.Threat_Direction,
         customer.Objects_Of_Interest,
         customer.Persons_Detected,
         customer.Guns_Model
