@@ -7,12 +7,15 @@ from threading import Thread
 
 import numpy as np
 import pyaudio
+import usb
 from scipy.io import wavfile
 
 from robot.helpers import recv_obj, send_data
 from robot.micarray import tuning
+from robot.pixel_ring import pixel_ring
 
 HOST = "localhost"
+# PORT = 5050
 PORT = int(np.random.rand() * 1000) + 6000
 
 DEVICE_NAME = "ReSpeaker 4 Mic Array (UAC1.0)"
@@ -20,6 +23,7 @@ DEVICE_NAME = "ReSpeaker 4 Mic Array (UAC1.0)"
 RATE, CHANNELS, WIDTH = 16000, 6, 2
 SECONDS, CHUNK_SIZE = 2, 1024
 
+dev = usb.core.find(idVendor=0x2886, idProduct=0x0018)
 api = tuning.find()
 
 

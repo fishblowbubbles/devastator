@@ -6,6 +6,7 @@ sys.path.append("./devastator")
 
 import navigation.controllers as controllers
 import navigation.physical_chassis as potato
+from robot import romeo
 # import robot.romeo as romeo
 # from vision.helpers import livestream, split_rgbd
 # from vision.tracker import Tracker
@@ -36,11 +37,23 @@ controller_params = {
                      [ 0 , 0 , 0 , 0 , 0 , 0.000001 ]
                     ]),
     'R' : 10*np.eye(2),
-    'saturation_limits' : np.tile( np.array([-1,1]) , (2,1) ),
+    'saturation_limits' : np.tile( np.matrix([-1,1]) , (2,1) ),
     'back_calc_weight' : np.matrix([
                                    [ 1 , 0 ],
                                    [ 0 , 1 ]
-                                   ])
+                                   ]),
+    'ports' : {
+        'u_man' : 5678, # manual input
+        'observation' : 56790, # camera d and theta
+        'get_states' : 5680, # not implemented yet!
+    },
+
+    'output_host' : romeo.HOST,
+    'output_port' : romeo.PORT,
+
+    'output_freq_limit' : 5, # in Hz. 210Hz is good.
+    'input_conn_reset_time' : 0.3, # failsafe watchdog on input resets the output to zero if there are no inputs
+    'predict_freq_limit' : 220,
 }
 
 if __name__ == "__main__":

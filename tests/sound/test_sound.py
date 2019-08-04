@@ -13,14 +13,13 @@ if __name__ == "__main__":
 
     while True:
         samples = get_data(respeaker.HOST, respeaker.PORT)
-        # direction = respeaker.api.direction
+        direction = respeaker.api.direction
 
         is_gunshot = gunshot.detect(samples[:, 0])
         if is_gunshot:
-            print("Bang!")
-            # print("Gunshot(s)! Direction: {}".format(direction))
+            print("Gunshot(s)! Direction: {}".format(direction))
 
         emotion, confidence = sentiment.detect(samples[:, 0])
         if emotion != "-":
-            print("Emotion: {:10}\tConfidence: {:5.2}"
-                    .format(emotion, float(confidence)))
+            print("Emotion: {:10}\tConfidence: {:5.2}\tDirection: {}"
+                    .format(emotion, float(confidence), direction))

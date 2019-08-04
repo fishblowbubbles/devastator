@@ -5,9 +5,10 @@ import socket
 import sys
 
 import serial
+import numpy as np
 
 from robot import xpad
-from robot.helpers import ConfigFile, recv_obj
+from robot.helpers import ConfigFile, recv_obj, connect_and_send
 
 CONFIG = ConfigFile("devastator/robot/config.ini")
 
@@ -23,6 +24,7 @@ L_MOTOR, R_MOTOR = 1, 2
 L_POLARITY, R_POLARITY = -1, 1
 
 CONTROL_MODES = ["Joystick", "Trigger"]
+NAVIGATION_MODES = ["auto", "manual"]
 
 
 class Romeo:
@@ -43,8 +45,11 @@ class Romeo:
 
         self.change_direction = itertools.cycle([1, -1])
         self.change_control_mode = itertools.cycle(CONTROL_MODES)
+        self.change_navigation_mode = itertools.cycle(NAVIGATION_MODES)
+        
         self.direction = next(self.change_direction)
         self.control_mode = next(self.change_control_mode)
+        self.navigation_mode = next(self.change_navigation_mode)
 
         self.state = {
             xpad.L_JS_Y: 0,
@@ -64,8 +69,9 @@ class Romeo:
                 xpad.DPAD: self._handle_dpad                # adjust/trim motor voltage
             },
             xpad.BTN_DOWN: {
-                xpad.A_BTN: self._handle_a_btn,             # toggle direction (trigger mode only)
-                xpad.B_BTN: self._handle_b_btn              # toggle control mode
+                xpad.A_BTN : self._handle_a_btn,             # toggle direction (trigger mode only)
+                xpad.B_BTN : self._handle_b_btn,             # toggle control mode
+                xpad.SELECT: self._handle_select
             }
         }
 
@@ -125,6 +131,12 @@ class Romeo:
             self.control_mode = next(self.change_control_mode)
             print("Control Mode      = {}".format(self.control_mode))
 
+    def _handle_select(self, value):
+        if value == xpad.DOWN:
+            self.navigation_mode = next(self.change_navigation_mode)
+            print("Navigation Mode   = {}".format(self.control_mode))
+            connect_and_send({"mode": self.navigation_mode})
+
     def _handle_events(self, events):
         for key, inputs in events.items():
             for event, value in inputs.items():
@@ -155,6 +167,10 @@ class Romeo:
             self._trig_movement()
 
     def set_motors(self, l_motor_speed, r_motor_speed):
+        data = {"u_man": np.array([[l_motor_speed * L_POLARITY]
+                                   [r_motor_speed * R_POLARITY]])}
+        print("data", data)
+        connect_and_send(data, host="localhost", port=5678)
         self.set_speed(L_MOTOR, l_motor_speed * L_POLARITY)
         self.set_speed(R_MOTOR, r_motor_speed * R_POLARITY)
 
@@ -213,9 +229,16 @@ class Romeo:
             try:
                 while True:
                     connection, _ = server.accept()
-                    events = recv_obj(connection)
-                    self._handle_events(events)
-                    self._execute_movement()
+                    data = recv_obj(connection)
+                    if self.navigation_mode == "manual":
+                        self._handle_events(data)
+                        self._execute_movement()
+                    elif self.navigation_mode == "auto":
+                        l_motor_speed = data["u_out"][0, 0]
+                        r_motor_speed = data["u_out"][1, 0]
+                        print("L: {}, R: {}".format(l_motor_speed, r_motor_speed))
+                        self.set_speed(L_MOTOR, l_motor_speed)
+                        self.set_speed(R_MOTOR, r_motor_speed)
             finally:
                 server.shutdown(socket.SHUT_RDWR)
                 self.stop_motors()

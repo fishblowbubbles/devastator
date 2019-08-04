@@ -12,11 +12,17 @@ class KalmanFilter(object):
     '''
     def __init__(self, A=None, B=None, H=None, D=None, Q=None, R=None, P=None, x0=None, **kwds):
 
+        self.debug = kwds.get('debug', False)
+        # print('init kalman up to here')
         if A is None or H is None:
             raise ValueError("Set proper system dynamics.")
         self.r = 1 if B is None else B.shape[1] # num of inputs
         self.n = 1 if A is None else A.shape[1] # num of states.
         self.m = 1 if H is None else H.shape[0] # num of outputs
+
+        # print('#####################')
+        # print('### Kalman Filter ###')
+        # print('#####################\n')
 
         # print(self.r, self.n, self.m)
         
@@ -51,12 +57,17 @@ class KalmanFilter(object):
         # (output of controller and input of mechanical system)
         # rows are the individual elements of u
         # n_cols = 2 always. lower limit then higher limit.
+        # print('self.r in kalman = {}'.format(self.r))
         self.saturation_limits = kwds.get('saturation_limits', 
-                                    np.tile(np.array([-1,1]),(self.r, 1))) # default
+                                    np.tile(np.matrix([-1,1]),(self.r,))) # default
+        print(self.saturation_limits)
     
-    def saturate_controller_outputs(self, u):
-        u_clipped = np.clip(u, self.saturation_limits[:,0], self.saturation_limits[:,1])
-        return u_clipped
+    # def saturate_controller_outputs(self, u):
+    #     lower_limit = self.saturation_limits[:,0]
+    #     upper_limit = self.saturation_limits[:,1]
+    #     print((lower_limit, upper_limit))
+    #     u_clipped = np.clip(u, lower_limit, upper_limit)
+    #     return u_clipped
         
     def update_discrete_model(self, dt):
         '''
@@ -69,6 +80,7 @@ class KalmanFilter(object):
     def get_states(self):
         return self.x
 
+
     def predict(self, u=None):
         '''
         Takes in input u and outputs an estimation of the internal state x.
@@ -77,10 +89,11 @@ class KalmanFilter(object):
         current_time = time()
         dt = current_time - self.last_time
         self.last_time = current_time
-        u = np.zeros((self.r, 1)) if u is None else self.xsaturate_controller_outputs(u)
+        u = np.zeros((self.r, 1)) if u is None else u
         self.update_discrete_model(dt)
         self.x = np.dot(self.F, self.x) + np.dot(self.G, u)
         self.P = np.dot(np.dot(self.F, self.P), self.F.T) + self.Q
+
         return self.x
 
     def update(self, z):

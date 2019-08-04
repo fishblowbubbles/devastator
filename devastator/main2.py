@@ -58,9 +58,11 @@ from datetime import datetime
 from multiprocessing import Process
 
 import cv2
+import numpy as np
 
 from robot import realsense, respeaker, romeo, xpad
 from robot.helpers import connect_and_send, get_data
+from navigation.controllers import FullStateFeedbackController
 from sound.gunshot import Gunshot
 from sound.sentiment import Sentiment
 from vision.helpers import split_rgbd
@@ -108,29 +110,33 @@ if __name__ == "__main__":
 
         while True:
             samples = get_data(respeaker.HOST, respeaker.PORT)
-            # direction = respeaker.api.direction
+            direction = respeaker.api.direction
 
             emotion, confidence = sentiment.detect(samples[:, 0])
             is_gunshot = gunshot.detect(samples[:, 0])
             
             print("Emotion: {}, Confidence: {:5.2}".format(emotion, float(confidence)))
             print("Gunshot?: {}".format(is_gunshot))
+            print("Direction: {}".format(direction))
 
             frames = d435i._get_frames()
             frames = d435i._frames_to_rgbd(frames)
 
             rgb, depth = split_rgbd(frames)
             rgb, markers = tracker.detect(rgb, depth)
-            rgb, detections = yolov3.detect(rgb, depth)
+            # rgb, detections = yolov3.detect(rgb, depth)
 
             print("Markers: {}".format(markers))
-            print("Detections: {}".format(detections))
+            # print("Detections: {}".format(detections))
 
             if markers:
                 marker = markers[route[index]]
-                marker["objectsDetected"] = detections
-                connect_and_send(marker, host="192.168.1.136", port=8998)
-            connect_and_send(detections, host="192.168.1.136", port=8888)
+                y = {'y' : np.array([[marker["distanceToMarker"]],
+                                     [marker["angleToMarker"]]])}
+                connect_and_send(y, host="localhost", port=56790)
+                # marker["objectsDetected"] = detections
+                # connect_and_send(marker, host="192.168.1.136", port=8998)
+            # connect_and_send(detections, host="192.168.1.136", port=8888)
 
             """
             objects_of_interest = defaultdict(int)

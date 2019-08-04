@@ -19,6 +19,8 @@ except Exception as e:
 else:
     UVLOOP_EXISTS = True
 
+from numba import jit
+
 ### TODO ###
 # future work:
 # implement getters and setters properly
@@ -166,10 +168,11 @@ class FullStateFeedbackController(object):
 
         socks = kwds.get('socks', None)
         if socks is None:
+            print('Using default sockets.')
             self.socks = {
                 'u_man' : socket.socket(),
                 'observation' : socket.socket(),
-                'get_states' : socket.socket()
+                'get_states' : socket.socket(),
             }
         else:
             self.socks = socks
@@ -193,15 +196,10 @@ class FullStateFeedbackController(object):
             }
         else: self.hosts = hosts
 
-        self._listen = {
-                'u_man' : 'localhost',
-                'observation' : 'localhost',
-                'get_states' : 'localhost'
-            }
-
         for name, sock in self.socks.items():
+            print('Initialising sockets: {}'.format(name))
             sock.setblocking(False)
-            sock.bind(('localhost', self.ports[name]))
+            sock.bind((self.hosts.get(name, 'localhost'), self.ports[name]))
             sock.listen()
         
         # asyncio loop constructor
@@ -254,7 +252,7 @@ class FullStateFeedbackController(object):
         
         self.observation_conn_reset_time = kwds.get('observation_conn_reset_time', None)
         if self.observation_conn_reset_time is None:
-            warnings.warn("Observation connection watchdog timeout was not set. Defaulting to 0.3 seconds. Set using 'observation_conn_reset_time' in **kwds")
+            warnings.warn("Observation connection watchdog timeout was not set. Defaulting to 0.1 seconds. Set using 'observation_conn_reset_time' in **kwds")
             self.input_conn_reset_time = 0.1
         elif self.debug is True:
             print("Observation watchdog timeout set to {} seconds.".format(self.observation_conn_reset_time))
@@ -262,6 +260,11 @@ class FullStateFeedbackController(object):
         self._prev_input_time = time()
         self._prev_observation_time = time()
 
+        self.predict_refresh_rate = kwds.get('predict_refresh_rate', None)
+        if self.predict_refresh_rate is None:
+            warnings.warn("Observer prediction refresh rate was not set. Defaulting to 300Hz. Set using 'predict_refresh_rate' in **kwds")
+            self.predict_refresh_rate = 300
+        self.predict_min_time = 1.0/self.predict_refresh_rate
 
         if self.debug is True:
             print('\n\nCONTROLLER SUCCESSFULLY INITIALISED!\n\n\n')
@@ -296,19 +299,18 @@ class FullStateFeedbackController(object):
 
     @property
     def u(self):
-        if self.mode is 'manual':
-            self._u = np.vstack((self.u_man, np.zeros((self.m, 1))))
-        elif self.mode is 'auto':
-            self._u = self.get_controller_output()
-        return self._u
-
+        return self.prev_u_aug[0:2,:]
     @u.setter
     def u(self, u):
         pass
     
     @property
     def u_out(self):
-        return self.u[0:self.m,:]
+        # print('u_aug', self.prev_u_aug)
+        # print('m', self.m)
+        # print(self.m/2)
+        # print('u_out', self.prev_u_aug[0:self.m/2,:])
+        return self.prev_u_aug[0:self.m,:]
     
     @u_out.setter
     def u_out(self, u_out):
@@ -369,38 +371,37 @@ class FullStateFeedbackController(object):
         return K
 
     ### CONTROLLER OUTPUTS ###
-    def get_controller_output(self):
+    def calculate_output(self):
         '''
         Control law: u = -Kx
         splits control signal u into the saturated and unsaturated part -> u_aug
         '''
         x = self.observer.predict(self.prev_u_aug)
+        # print(self.K)
+        start_time = time()
         u = -self.K @ x
-        if self.mode is 'auto':
+        if self._mode is 'auto':
             self._saturation_limits = self._auto_saturation_limits
-        elif self.mode is 'manual':
+        elif self._mode is 'manual':
             self._saturation_limits = np.tile(self.u_man, (1,2))
-        u_sat = np.clip(
-            u, 
-            self._saturation_limits[:0],
-            self._saturation_limits[:1]
-            )
+        u_sat = np.clip(u, self._saturation_limits[:,0],self._saturation_limits[:,1])
         u_aug = np.vstack((u_sat, u-u_sat))
         self.prev_u_aug = u_aug
         return u_aug
     
+    
     async def predict_states(self):
         print('Starting predict_states...')
         while True:
-            print('predicting states')
-
-            # await self._loop.run_in_executor(self.pool, sleep, 0.1)
-
-            # self.observer.x = await self._loop.run_in_executor(self.pool, self.observer.predict, self.u) # run in pool
-            
-            self.observer.x = self.observer.predict(self.prev_u_aug)
-            print('prediction done')
-            # self.observer.x = self.observer.predict(u = self.u) # run synchronously, which may not be so bad
+            predict_start_time = time()
+            await self._loop.run_in_executor(self.pool, self.calculate_output) # run in pool
+            elapsed = time()-predict_start_time 
+            additional_wait = self.predict_min_time - elapsed
+            if additional_wait > 0:
+                await asyncio.sleep(additional_wait)
+            else:
+                current_rate = 1.0/elapsed
+                warnings.warn('Predict refresh rate below target rate. Currently {}Hz.'.format(self.predict_refresh_rate, current_rate) )
     
     ### input sensor readings ###
     def update_states(self, y):
@@ -410,10 +411,13 @@ class FullStateFeedbackController(object):
         packets = []
         while True:
             packet = await self._loop.sock_recv(connection, 1024)
+            print('Packet: {}'.format(packet))
             if not packet:
+                print('Not packet!')
                 break
             packets.append(packet)
         try:
+            print('Packets: {}'.format(packets))
             obj = pickle.loads(b"".join(packets))
             if self.debug is True:
                 print('Received an object of type {}'.format(type(obj)))
@@ -421,8 +425,8 @@ class FullStateFeedbackController(object):
         except pickle.UnpicklingError:
             warnings.warn('Object cannot be unpickled. Raw inp: {}'.format(packets))
             return packets
-        else:
-            self._prev_input_time = time() #reset the input watchdog timer
+        except EOFError:
+            return None
     
     async def arecv_dict(self, conn, addr):
         obj = await self.arecv_obj(conn, addr)
@@ -446,6 +450,7 @@ class FullStateFeedbackController(object):
             }
             '''
             y = obj.get('y', None)
+            print(y)
 
             if isinstance(y, np.matrix):
                 self._prev_observation_time = time() #reset the observation watchdog timer
@@ -477,18 +482,19 @@ class FullStateFeedbackController(object):
             }
             '''
             u_man = obj.get('u_man', None)
-            if u_man is not None:
-                assert isinstance(u_man, np.matrix)
-                self.u_man = u_man
-                success = True
+            if isinstance(u_man, np.matrix):
+                if u_man.shape == self.u_man.shape:
+                    self.u_man = u_man
+                    success = True
+                    self._prev_input_time = time() #reset the input watchdog timer
                 if self.debug is True:
                     print('States updated. u_man = {}'.format(u_man))
             
             mode = obj.get('mode', None)
-            if mode is not None:
-                assert mode is 'manual' or mode is 'auto'
-                self.mode = mode
+            if mode in ['manual', 'auto']:
+                self._mode = mode
                 success = True
+                self._prev_input_time = time() #reset the input watchdog timer
                 if self.debug is True:
                     print('States updated. mode = {}'.format(mode))
 
@@ -504,12 +510,13 @@ class FullStateFeedbackController(object):
     async def aconnect_and_send(self, get_data_func, host, port):
         with socket.socket() as s:
             s.setblocking(False)
-            if self.debug is True: print('Awaiting output connection.')
+            if self.debug is True: print('Awaiting output connection: {}, {}'.format(host, port))
             await self._loop.sock_connect(s, (host, port))
             data = get_data_func()
+            print("data", data)
             pkl = pickle.dumps(data)
-            if self.debug is True: print('Output connection established.\nSending data: {}'.format(data))
-            await self._loop.sock_sendall(s, data)
+            if self.debug is True: print('Output connection established.\nSending...\nData: {}'.format(data))
+            await self._loop.sock_sendall(s, pkl)
             if self.debug is True: print('Output sent')
             return True
 
@@ -521,7 +528,7 @@ class FullStateFeedbackController(object):
             pass
 
     async def input_watchdog(self):
-        print_every = 5
+        print_every = 10
         count = 0
         if self.debug is True: print("Starting input watchdog in 3...")
         await asyncio.sleep(1)
@@ -554,9 +561,10 @@ class FullStateFeedbackController(object):
         if self.debug is True: print("Observation watchdog started.")
         
         while True:
-            time_since_last_inp = time() - self._prev_observation_time
-            if time_since_last_inp > self.observation_conn_reset_time:
-                self.mode = 'manual'
+            time_since = time() - self._prev_observation_time
+            if time_since > self.observation_conn_reset_time:
+                print('hello')
+                self._mode = 'manual'
                 if self.debug is True:
                     if count is 0: print('No observation connection! Time since last input = {:.1f}s'.format(time_since_last_inp))
                 count = (count + 1) % print_every
@@ -576,6 +584,7 @@ class FullStateFeedbackController(object):
         try:
             while True:
                 conn, addr = await self._loop.sock_accept(self.socks[sockkey])
+                print(conn, addr)
                 if self.debug is True:
                     print(success_str + ' {}'.format(addr))
                 self._loop.create_task(handler(conn, addr))
@@ -611,7 +620,9 @@ class FullStateFeedbackController(object):
             # output = {
             #     'u_out' : self.u_out
             # }
-            output = {}
+            output = {
+                'u_out' : self.u_out
+            }
             return output
 
         while True:
@@ -643,8 +654,8 @@ class FullStateFeedbackController(object):
             if self.debug is True: print('Starting {} coroutine'.format(name))
             self._coros.append(self._loop.create_task(server()))
 
-        self._coros.append(self._loop.create_task(self.input_watchdog()))
-        self._coros.append(self._loop.create_task(self.observation_watchdog()))
+        # self._coros.append(self._loop.create_task(self.input_watchdog()))
+        # self._coros.append(self._loop.create_task(self.observation_watchdog()))
         self._coros.append(self._loop.create_task(self.predict_states()))
 
         await asyncio.wait(self._coros)
