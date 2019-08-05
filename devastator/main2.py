@@ -78,12 +78,13 @@ if __name__ == "__main__":
 
     devices = {
         "ReSpeaker": respeaker.ReSpeaker(),
-        "Romeo": romeo.Romeo()
+        "Romeo": romeo.Romeo(),
+        "XPad": xpad.XPad(romeo.HOST, romeo.PORT)
     }
 
     d435i = realsense.D435i()
 
-    yolov3 = YoloV3()
+    # yolov3 = YoloV3()
     tracker = Tracker()
     sentiment = Sentiment()
     gunshot = Gunshot()
@@ -97,20 +98,15 @@ if __name__ == "__main__":
         print("Starting {} ...".format(name))
         process.start()
 
-    time.sleep(5)
+    time.sleep(3)
 
     try:
         delay = int(100 / realsense.FPS)
-        
-        route = [0, 1, 2, 3]
-        index = 0 
-
-        target_host = "192.168.1.136" 
-        target_port = 8998
-
         while True:
             samples = get_data(respeaker.HOST, respeaker.PORT)
             direction = respeaker.api.direction
+            if direction > 180:
+                direction -= 360
 
             emotion, confidence = sentiment.detect(samples[:, 0])
             is_gunshot = gunshot.detect(samples[:, 0])
@@ -126,42 +122,26 @@ if __name__ == "__main__":
             rgb, markers = tracker.detect(rgb, depth)
             # rgb, detections = yolov3.detect(rgb, depth)
 
+            # for detection in detections:
+                # detection["emotion"] = emotion
+                # for e in detection["equip"]:
+                    # if e["label"] == "Rifle" or e["label"] == "Handgun":
+                        # e["gunshot"] = is_gunshot
+                        # e["direction"] = direction
+            
             print("Markers: {}".format(markers))
             # print("Detections: {}".format(detections))
 
             if markers:
-                marker = markers[route[index]]
-                y = {'y' : np.array([[marker["distanceToMarker"]],
-                                     [marker["angleToMarker"]]])}
-                connect_and_send(y, host="localhost", port=56790)
+                marker = markers[0]
                 # marker["objectsDetected"] = detections
+                y = {'y' : np.array([[marker["distanceToMarker"]],
+                                     [marker["angleToMarker"] * 0.01745329252]])}
+                connect_and_send(y, host="localhost", port=56790)
                 # connect_and_send(marker, host="192.168.1.136", port=8998)
-            # connect_and_send(detections, host="192.168.1.136", port=8888)
-
-            """
-            objects_of_interest = defaultdict(int)
-            if detections:
-                for person in detections:
-                    for e in person["equip"]:
-                        if e["label"] == "Face": continue
-                        objects_of_interest[e["label"]] += 1
-
-            objects_of_interest = ["{}: {}".format(label, count) for label, count in objects_of_interest.items()]
-            objects_of_interest.append("Person: {}".format(len(detections)))
-            objects_of_interest = "<p/>".join(objects_of_interest)
             
-            data = {
-                str(idx): {
-                    "Time_Stamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "Threat_Direction": "Sound direction",
-                    "Emotions_Present": emotion,
-                    "Gunshots": str(is_gunshot),
-                    "Objects_Of_Interest": objects_of_interest,
-                    "Persons_Detected": str(len(detections)),
-                    "Guns_Model": "Rifle"
-                }
-            }
-            """
+            # if detections:
+                # connect_and_send(detections, host="192.168.1.136", port=8888)
 
             cv2.imshow("devastator", rgb)
             if cv2.waitKey(delay) == ord("q"):

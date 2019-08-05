@@ -19,11 +19,7 @@ except Exception as e:
 else:
     UVLOOP_EXISTS = True
 
-from numba import jit
-
-### TODO ###
-# future work:
-# implement getters and setters properly
+# from numba import jit
 
 
 
@@ -33,9 +29,17 @@ class FullStateFeedbackController(object):
     '''
     def __init__(self, *args, **kwds):
         self.debug = kwds.get('debug', False)
+        self.debug_states = kwds.get('debug_states', False)
+
+        self._target = np.matrix([
+            [1.0],
+            [0.0]
+        ])
+
         A = kwds.get('A', np.matrix(0))
         B = kwds.get('B', np.matrix(0))
         C = kwds.get('C', np.matrix(0))
+        
         
         n = A.shape[0]
         assert n == A.shape[1], "Matrix A is not square!"
@@ -100,6 +104,11 @@ class FullStateFeedbackController(object):
         g = gm.get(self.gain_method, None)
         if g is not None:
             self.K = g[0](*g[1])
+
+            #DEBUG K
+            # self.K = np.matrix(self.K) @ np.matrix(np.diag([1,1,0,0,1,0])) #debug distance
+            # self.K = np.matrix(self.K) @ np.matrix(np.diag([0,0,1,1,0,1])) #debug angle
+
             if self.debug is True:
                 print('K :\n{}\n'.format(self.K))
         
@@ -208,12 +217,14 @@ class FullStateFeedbackController(object):
         self._loop = asyncio.get_event_loop()
         self._coros = []
 
-        self._u_man = np.zeros((self.r, 1))
-        self._y = None
+        self._u_man = np.zeros((self.r//2, 1))
+        self._y = (np.zeros((self.m, 1)), time())
 
-        self.timeout = kwds.get('timeout', 3.0)
+        self.timeout = kwds.get('timeout', 1)
         if self.debug is True:
             print('\nTimeout = {} seconds\n'.format(self.timeout))
+
+        self.lost = True
         
         self.output_host = kwds.get('output_host', None)
         self.output_port = kwds.get('output_port', None)
@@ -268,6 +279,20 @@ class FullStateFeedbackController(object):
 
         if self.debug is True:
             print('\n\nCONTROLLER SUCCESSFULLY INITIALISED!\n\n\n')
+    
+    ### debug ###
+    def print_states(self):
+        states = [
+            ['mode', self._mode],
+            ['x', self.x],
+            ['y', self.y],
+            ['u_out', self.u_out],
+            ['u_man', self.u_man],
+            ['u_aug', self.prev_u_aug],
+        ]
+        for state in states:
+            print('{}: {}'.format(*state))
+
 
     ### getters and setters
 
@@ -306,10 +331,6 @@ class FullStateFeedbackController(object):
     
     @property
     def u_out(self):
-        # print('u_aug', self.prev_u_aug)
-        # print('m', self.m)
-        # print(self.m/2)
-        # print('u_out', self.prev_u_aug[0:self.m/2,:])
         return self.prev_u_aug[0:self.m,:]
     
     @u_out.setter
@@ -321,13 +342,23 @@ class FullStateFeedbackController(object):
         if time() - self._y[1] < self.timeout:
             return self._y[0]
         else:
-            return None
+            return self._target
 
     @y.setter
     def y(self, y):
-        self._y = y, time()
         if y is not None:
-            self.update_states(y)
+            self._y = self._target-y, time()
+            self.update_states(self._y[0])
+            self.lost = False
+
+    
+    # @property
+    # def z(self):
+    #     return self._z
+    
+    # @z.setter
+    # def z(self):
+    #     return self._target - self.y
     
     @property
     def output_freq_limit(self):
@@ -378,15 +409,23 @@ class FullStateFeedbackController(object):
         '''
         x = self.observer.predict(self.prev_u_aug)
         # print(self.K)
-        start_time = time()
         u = -self.K @ x
+
+        if time() - self._y[1] > self.timeout:
+            u = np.matrix(np.zeros_like(u))
+            # self.observer.reset()
+            self.observer.update(np.zeros_like(self._target))
+            self.lost = True
+
         if self._mode is 'auto':
             self._saturation_limits = self._auto_saturation_limits
         elif self._mode is 'manual':
-            self._saturation_limits = np.tile(self.u_man, (1,2))
+            self._saturation_limits = np.matrix(np.tile(self.u_man, (1,2)))
         u_sat = np.clip(u, self._saturation_limits[:,0],self._saturation_limits[:,1])
+        # u_sat_auto = np.clip(u, self._auto_saturation_limits[:,0],self._auto_saturation_limits[:,1])
         u_aug = np.vstack((u_sat, u-u_sat))
         self.prev_u_aug = u_aug
+        if self.debug_states is True: self.print_states()
         return u_aug
     
     
@@ -411,13 +450,10 @@ class FullStateFeedbackController(object):
         packets = []
         while True:
             packet = await self._loop.sock_recv(connection, 1024)
-            print('Packet: {}'.format(packet))
             if not packet:
-                print('Not packet!')
                 break
             packets.append(packet)
         try:
-            print('Packets: {}'.format(packets))
             obj = pickle.loads(b"".join(packets))
             if self.debug is True:
                 print('Received an object of type {}'.format(type(obj)))
@@ -452,9 +488,10 @@ class FullStateFeedbackController(object):
             y = obj.get('y', None)
             print(y)
 
-            if isinstance(y, np.matrix):
+            if isinstance(y, (np.matrix, np.ndarray)):
                 self._prev_observation_time = time() #reset the observation watchdog timer
-                self.y = y
+                print('obs recv: {}'.format(y))
+                self.y = np.matrix(y)
                 if self.debug is True:
                     print('States updated. y = {}'.format(y))
             else:
@@ -482,9 +519,9 @@ class FullStateFeedbackController(object):
             }
             '''
             u_man = obj.get('u_man', None)
-            if isinstance(u_man, np.matrix):
+            if isinstance(u_man, (np.matrix, np.ndarray)):
                 if u_man.shape == self.u_man.shape:
-                    self.u_man = u_man
+                    self.u_man = np.matrix(u_man)
                     success = True
                     self._prev_input_time = time() #reset the input watchdog timer
                 if self.debug is True:
@@ -513,7 +550,6 @@ class FullStateFeedbackController(object):
             if self.debug is True: print('Awaiting output connection: {}, {}'.format(host, port))
             await self._loop.sock_connect(s, (host, port))
             data = get_data_func()
-            print("data", data)
             pkl = pickle.dumps(data)
             if self.debug is True: print('Output connection established.\nSending...\nData: {}'.format(data))
             await self._loop.sock_sendall(s, pkl)
@@ -563,10 +599,9 @@ class FullStateFeedbackController(object):
         while True:
             time_since = time() - self._prev_observation_time
             if time_since > self.observation_conn_reset_time:
-                print('hello')
                 self._mode = 'manual'
                 if self.debug is True:
-                    if count is 0: print('No observation connection! Time since last input = {:.1f}s'.format(time_since_last_inp))
+                    if count is 0: print('No observation connection! Time since last input = {:.1f}s'.format(time_since))
                 count = (count + 1) % print_every
             else:
                 count = 0
@@ -617,12 +652,17 @@ class FullStateFeedbackController(object):
         if self.debug is True: print('Starting output client at host={}, port={}'.format(self.output_host, self.output_port))
         
         def get_u_out():
-            # output = {
-            #     'u_out' : self.u_out
-            # }
+
             output = {
                 'u_out' : self.u_out
             }
+
+            # output = {
+            #     'u_out' : np.matrix([
+            #         [1],
+            #         [1]
+            #     ])
+            # }
             return output
 
         while True:

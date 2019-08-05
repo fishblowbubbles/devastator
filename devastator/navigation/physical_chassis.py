@@ -39,7 +39,7 @@ class TrackedChassis(object):
             [   0   ,   0   ],
             [  kdm  ,  kdm  ],
             [   0   ,   0   ],
-            [-kdm*r , kdm*r ]
+            [ kdm*r ,-kdm*r ]
         ])
 
         # C matrix

@@ -47,7 +47,7 @@ class KalmanFilter(object):
         #self.F and self.G will be calculated upon a predict call using update_discrete_model
         
         self.Q = np.eye(self.n) if Q is None else Q # covariance of the process noise
-        self.R = np.eye(self.n) if R is None else R # covariance of the observation noise
+        self.R = np.eye(self.m) if R is None else R # covariance of the observation noise
         self.P = np.eye(self.n) if P is None else P
         self.x = np.zeros((self.n, 1)) if x0 is None else x0 # initialise states
 
@@ -93,7 +93,10 @@ class KalmanFilter(object):
         self.update_discrete_model(dt)
         self.x = np.dot(self.F, self.x) + np.dot(self.G, u)
         self.P = np.dot(np.dot(self.F, self.P), self.F.T) + self.Q
-
+        integrals = self.x[-self.m:,:]
+        integral_limits = np.matrix(np.tile(np.matrix([-1,1]),(self.m, 1)))
+        integrals = np.clip(integrals, integral_limits[:,0], integral_limits[:,1])
+        self.x = np.vstack((self.x[:self.n - self.m,:],integrals))
         return self.x
 
     def update(self, z):
@@ -109,3 +112,6 @@ class KalmanFilter(object):
             np.dot(I - np.dot(K, self.H), self.P), (I - np.dot(K, self.H)).T
         ) + np.dot(np.dot(K, self.R), K.T)
         return self.x
+
+    def reset(self):
+        self.x = np.zeros_like(self.x)
