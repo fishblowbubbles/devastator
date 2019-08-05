@@ -6,6 +6,7 @@ import sys
 
 import serial
 import numpy as np
+from threading import Thread
 
 from robot import xpad
 from robot.helpers import ConfigFile, recv_obj, connect_and_send
@@ -16,6 +17,9 @@ CONFIG = ConfigFile("devastator/robot/config.ini")
 # HOST = "192.168.1.232"  # UP-Squared 2
 HOST = "localhost"
 PORT = 6060
+
+AUTO_HOST = "localhost"
+AUTO_PORT = 7777 
 
 DEVICE_ID = "usb-Arduino_LLC_Arduino_Leonardo-if00"
 ENABLE, DISABLE = "enable", "disable"
@@ -28,12 +32,18 @@ NAVIGATION_MODES = ["auto", "manual"]
 
 
 class Romeo:
-    def __init__(self, device_id=DEVICE_ID, config=CONFIG, host=HOST, port=PORT):
+    def __init__(self, device_id=DEVICE_ID, config=CONFIG, 
+                 xpad_host=HOST, xpad_port=PORT,
+                 auto_host=AUTO_HOST, auto_port=AUTO_PORT,
+                 ctrl_host="localhost", ctrl_port=5678):
         device_path = "/dev/serial/by-id/{}".format(device_id)
         self.serial = serial.Serial(device_path,
                                     config.get("romeo", "baudrate"))
         self.device_path, self.config = device_path, config
-        self.host, self.port = host, port
+
+        self.xpad_host, self.xpad_port = xpad_host, xpad_port
+        self.auto_host, self.auto_port = auto_host, auto_port
+        self.ctrl_host, self.ctrl_port = ctrl_host, ctrl_port
 
         self.gamma = float(config.get("romeo", "gamma"))
         self.min_voltage = float(config.get("romeo", "minvoltage"))
@@ -134,8 +144,9 @@ class Romeo:
     def _handle_select(self, value):
         if value == xpad.DOWN:
             self.navigation_mode = next(self.change_navigation_mode)
-            print("Navigation Mode   = {}".format(self.control_mode))
-            connect_and_send({"mode": self.navigation_mode})
+            print("Navigation Mode   = {}".format(self.navigation_mode))
+            connect_and_send({"mode": self.navigation_mode}, 
+                             self.ctrl_host, self.ctrl_port)
 
     def _handle_events(self, events):
         for key, inputs in events.items():
@@ -144,38 +155,6 @@ class Romeo:
                     self.callbacks[key][event](value)
                 except KeyError:
                     continue
-
-    """ MOVEMENT CONTROLS """
-
-    def _js_movement(self):
-        forward_speed = self.state[xpad.L_JS_Y]
-        turn_speed = self.state[xpad.R_JS_X]
-        l_motor_speed = forward_speed - turn_speed
-        r_motor_speed = forward_speed + turn_speed
-        self.set_motors(l_motor_speed, r_motor_speed)
-
-    def _trig_movement(self):
-        l_motor_speed = self.state[xpad.L_TRIG] * self.direction
-        r_motor_speed = self.state[xpad.R_TRIG] * self.direction
-        self.set_motors(l_motor_speed, r_motor_speed)
-
-    def _execute_movement(self):
-        self.serial.read_all()
-        if self.control_mode == "Joystick":
-            self._js_movement()
-        if self.control_mode == "Trigger":
-            self._trig_movement()
-
-    def set_motors(self, l_motor_speed, r_motor_speed):
-        data = {"u_man": np.array([[l_motor_speed * L_POLARITY]
-                                   [r_motor_speed * R_POLARITY]])}
-        print("data", data)
-        connect_and_send(data, host="localhost", port=5678)
-        self.set_speed(L_MOTOR, l_motor_speed * L_POLARITY)
-        self.set_speed(R_MOTOR, r_motor_speed * R_POLARITY)
-
-    def stop_motors(self):
-        self.set_motors(0, 0)
 
     """ SERIAL COMMANDS """
 
@@ -208,8 +187,7 @@ class Romeo:
         return voltage
 
     def set_voltage(self, motor, voltage):
-        self.config.save("romeo", "{}voltage".format(("left", "right")[motor - 1]),
-                                                     voltage)
+        self.config.save("romeo", "{}voltage".format(("left", "right")[motor - 1]), voltage)
         print("{} Motor Voltage   = {}".format(("L", "R")[motor - 1], voltage))
         message = "motor{}_voltage {}".format(motor, voltage)
         self._send_serial(message)
@@ -220,25 +198,75 @@ class Romeo:
         voltage = (voltage, self.max_voltage)[voltage > self.max_voltage]
         self.set_voltage(motor, round(voltage, 2))
 
+    """ MOVEMENT CONTROLS """
+
+    def _js_movement(self):
+        forward_speed = self.state[xpad.L_JS_Y]
+        turn_speed = self.state[xpad.R_JS_X]
+        l_motor_speed = forward_speed - turn_speed
+        r_motor_speed = forward_speed + turn_speed
+        self.set_motors(l_motor_speed, r_motor_speed)
+
+    def _trig_movement(self):
+        l_motor_speed = self.state[xpad.L_TRIG] * self.direction
+        r_motor_speed = self.state[xpad.R_TRIG] * self.direction
+        self.set_motors(l_motor_speed, r_motor_speed)
+
+    def _execute_manual_movement(self):
+        self.serial.read_all()
+        if self.control_mode == "Joystick":
+            self._js_movement()
+        if self.control_mode == "Trigger":
+            self._trig_movement()
+
+    def _execute_auto_movement(self, data):
+        self.serial.read_all()
+        l_motor_speed = data["u_out"][0, 0]
+        r_motor_speed = data["u_out"][1, 0]    
+        self.set_speed(L_MOTOR, l_motor_speed)
+        self.set_speed(R_MOTOR, r_motor_speed)
+        print("L: {}, R: {}".format(l_motor_speed, r_motor_speed))
+
+    def set_motors(self, l_motor_speed, r_motor_speed):
+        l_motor_speed *= L_POLARITY
+        r_motor_speed *= R_POLARITY
+        data = {"u_man": np.array([[l_motor_speed], 
+                                   [r_motor_speed]])}
+        connect_and_send(data, self.ctrl_host, self.ctrl_port)
+        self.set_speed(L_MOTOR, l_motor_speed)
+        self.set_speed(R_MOTOR, r_motor_speed)
+        
+    def stop_motors(self):
+        self.set_motors(0, 0)
+
     """ MAIN LOOP """
 
-    def run(self):
+    def _start_server(self):
         with socket.socket() as server:
-            server.bind((self.host, self.port))
+            server.bind((self.xpad_host, self.xpad_port))
             server.listen()
+            while True:
+                connection, _ = server.accept()
+                events = recv_obj(connection)
+                self._handle_events(events)
+                if self.navigation_mode == "manual":
+                    self._execute_manual_movement()
+
+    def run(self):
+        xpad_server = Thread(target=self._start_server)
+        xpad_server.daemon = True
+        xpad_server.start()
+        with socket.socket() as auto_server:
             try:
+                auto_server.bind((self.auto_host, self.auto_port))
+                auto_server.listen()
                 while True:
-                    connection, _ = server.accept()
+                    connection, _ = auto_server.accept()
                     data = recv_obj(connection)
-                    if self.navigation_mode == "manual":
-                        self._handle_events(data)
-                        self._execute_movement()
-                    elif self.navigation_mode == "auto":
-                        l_motor_speed = data["u_out"][0, 0]
-                        r_motor_speed = data["u_out"][1, 0]
-                        print("L: {}, R: {}".format(l_motor_speed, r_motor_speed))
-                        self.set_speed(L_MOTOR, l_motor_speed)
-                        self.set_speed(R_MOTOR, r_motor_speed)
+                    if self.navigation_mode == "auto":
+                        self._execute_auto_movement(data)
             finally:
-                server.shutdown(socket.SHUT_RDWR)
+                auto_server.shutdown(socket.SHUT_RDWR)
+                auto_server.close()
+                xpad_server._stop()
                 self.stop_motors()

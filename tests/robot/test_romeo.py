@@ -11,5 +11,5 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=romeo.PORT)
     args = parser.parse_args()
 
-    arduino = romeo.Romeo(host=args.host, port=args.port)
+    arduino = romeo.Romeo(xpad_host=args.host, xpad_port=args.port)
     arduino.run()
