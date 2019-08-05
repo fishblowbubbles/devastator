@@ -40,17 +40,22 @@ class Robot():
         showSprite(self.sprite)
 
     def detected_person(self, information):
+        print("detected")
         marker = makeSprite("person_marker.png")
         for i in information["objectsDetected"]:
             ###>1 is threat
             ###>0.2 suspect
             ##<0.2 is Person
+            print("danger")
+
             if i["danger_score"] > 1:
                 marker = makeSprite("threat_marker.png")
             elif 0.2 < i["danger_score"] < 1:
                 marker = makeSprite("suspect_marker.png")
             else:
                 marker = makeSprite("person_marker.png")
+
+            print("marked")
         # for i in range(len(information["objectsDetected"])):
         #         # print(information["objectsDetected"][i])
         #
@@ -63,11 +68,13 @@ class Robot():
         #     elif information["objectsDetected"][i] == "THREAT":
         #         marker = makeSprite("threat_marker.png")
 
-            distance_from_person = information["distanceToObject"][i]
+            distance_from_person = i["depth"]
             # print(distance_from_person)
-            angle_from_person = information["angleToObject"][i]
+            angle_from_person = i["h_angle"]
+            print("obtained")
             marker_x, marker_y = self.get_person_coord(distance_from_person, angle_from_person)
-            pause(800)
+            print("coords")
+            pause(10)
             moveSprite(marker, marker_x, marker_y)
             showSprite(marker)
 
@@ -160,7 +167,7 @@ def run():
                     scan_label = makeLabel("Scanning...",30,robot_curr_x+40,robot_curr_y-15)
                     showLabel(scan_label)
                     robot.detected_person(data)
-                    pause(800)
+                    pause(10)
                     hideLabel(scan_label)
 
                 print("done")

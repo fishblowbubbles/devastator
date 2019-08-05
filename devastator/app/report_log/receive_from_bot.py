@@ -23,6 +23,8 @@ def recv_obj(s):
 
 def update_data():
     idx = 1
+    gun_classifier = GunClassifier(state_dict='resnet18_loss_1.056413.pt')
+    enc, names = load_known()
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
         server.bind((HOST, PORT))
         server.listen()
@@ -46,7 +48,13 @@ def update_data():
                     person_image = []
                     gun_image = []
                     person_who = ""
+                    gunshots = ""
+                    gunshot_direction = ""
+
+
                     danger_score = i['danger_score']
+                    emotion = i['emotion']
+
                     if danger_score > 1:
                         status = "THREAT"
                     elif 0.2<danger_score<1:
@@ -59,11 +67,22 @@ def update_data():
                             person_image.append(e['image'])
                         if e['label'] == "Rifle":
                             gun_image.append(e['image'])
+                        if 'gunshot' in e:
+                            gunshots = e['gunshot']
+                        if 'direction' in e:
+                            gunshot_direction = e['direction']
+
+
                         objects_of_interest[e['label']] += 1
 
-                    for p in person_image:
-                        person_who = guess_who(p, enc, names)
-                    person_name += str(person_who) + " <p/>"
+
+                    if len(person_image)!=0:
+                        for p in person_image:
+                            # print(p.shape)
+                            person_who = guess_who(p, enc, names)
+                        person_name += str(person_who) + " <p/>"
+                    else:
+                        person_name = ""
 
                     if len(gun_image) == 0:
                         gun_name = ""
@@ -80,9 +99,9 @@ def update_data():
                         str(idx): {
                             "Time_Stamp": time_stamp,
                             "Status_Targets": status,
-                            "Emotions_Present": "HOW",
-                            "Gunshots": "HOW",
-                            "Threat_Direction": "HOW",
+                            "Emotions_Present": str(emotion),
+                            "Gunshots": str(gunshots),
+                            "Threat_Direction": str(gunshot_direction),
                             "Objects_Of_Interest": objects_of_interest,
                             "Persons_Detected": person_name,
                             "Guns_Model": gun_name
@@ -106,6 +125,4 @@ def update_data():
             print("YAS")
 
 if __name__ == '__main__':
-    enc, names = load_known()
-    gun_classifier = GunClassifier(state_dict='resnet18_loss_1.056413.pt')
     update_data()

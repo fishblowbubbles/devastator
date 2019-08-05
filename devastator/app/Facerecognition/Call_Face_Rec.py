@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import math
 frametest = np.numarray
-def face_distance_to_conf(face_distance, face_match_threshold=0.47):
+def face_distance_to_conf(face_distance, face_match_threshold=0.45):
     if face_distance > face_match_threshold:
         range = (1.0 - face_match_threshold)
         linear_val = (1.0 - face_distance) / (range * 2.0)
@@ -19,9 +19,9 @@ def face_distance_to_conf(face_distance, face_match_threshold=0.47):
 
 def load_known():
 # Load a sample picture and learn how to recognize it.
-    image = face_recognition.load_image_file("./known/ResumePic.jpg")
+    image = face_recognition.load_image_file("./known/yujin.jpg")
     face_encoding = face_recognition.face_encodings(image)[0]
-    image2 = face_recognition.load_image_file("./known/download.jpg")
+    image2 = face_recognition.load_image_file("./known/cheryl.jpg")
     face_encoding2 = face_recognition.face_encodings(image2)[0]
     image3 = face_recognition.load_image_file("./known/amirul.jpg")
     face_encoding3 = face_recognition.face_encodings(image3)[0]
@@ -49,14 +49,14 @@ def load_known():
     "Cheryl",
     "Amirul",
     "Martin",
-    "Weseley",
+    "Wesley",
     "Wen Shu",
     "Ting Yu"
     ]
     
     return known_face_encodings, known_face_names
 
-def guess_who(picture,known_face_encodings, known_face_names, thresh = 0.46):
+def guess_who(picture,known_face_encodings, known_face_names, thresh = 0.40):
     # video_capture = cv2.VideoCapture("example.png")
 
     ###for testing
@@ -71,13 +71,15 @@ def guess_who(picture,known_face_encodings, known_face_names, thresh = 0.46):
 
     # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
     rgb_frame = frame[:, :, ::-1]
-
+    name = "Unknown"
     # Find all the faces and face enqcodings in the frame of video
     face_locations = face_recognition.face_locations(rgb_frame)
+    if len(face_locations) == 0:
+        return name, -1
+    # face_locations = [(0,picture.shape[1],picture.shape[0],0)]
+    # print(face_locations)
     face_encoding = face_recognition.face_encodings(rgb_frame, face_locations)[0]
     #matches = face_recognition.compare_faces(known_face_encodings, face_encoding, tolerance = 0.46)
-    
-    name = "Unknown"
 
     # Or instead, use the known face with the smallest distance to the new face
     confidences = np.zeros(len(known_face_encodings))
@@ -98,5 +100,5 @@ def guess_who(picture,known_face_encodings, known_face_names, thresh = 0.46):
 
 enc, names = load_known()
 # print(guess_who(None,enc, names))
-# print(frametest)
+# # print(frametest)
 
