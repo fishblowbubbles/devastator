@@ -5,7 +5,7 @@ from collections import defaultdict
 from devastator.app.Facerecognition.Call_Face_Rec import load_known, guess_who, frametest
 from devastator.vision.gun_classifier import GunClassifier
 
-#ROBOT TO SEND report logs TO PORT 8888
+#ROBOT TO SEND report logs TO PORT 8888 (run both receive frm bot.py and robot server.py and open response html file)
 HOST = "192.168.1.136"
 # HOST = "192.168.1.185"
 PORT = 8888
@@ -36,11 +36,7 @@ def update_data():
                 print(data)
                 time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 curr_data = json.load(open('reports.json'))
-                # print(curr_data)
 
-
-                # person_name = []
-                # gun_model = []
                 for i in data: #for each person detected
                     person_name = ""
                     gun_name = ""
@@ -113,13 +109,6 @@ def update_data():
                 with open('reports.json', 'w') as outfile:
                     json.dump(curr_data, outfile,
                               indent=4)
-
-
-
-                # curr_data['data'].update(data)
-                # with open('reports.json', 'w') as outfile:
-                #     json.dump(curr_data, outfile,
-                #               indent=4)
 
         finally:
             print("YAS")

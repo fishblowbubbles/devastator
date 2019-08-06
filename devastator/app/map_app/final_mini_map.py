@@ -4,7 +4,6 @@ from devastator.app.map_app.pygame_functions import *
 from devastator.app.map_app.helpers import *
 
 HOST = "192.168.1.136"
-# HOST = "localhost"
 PORT = 8998
 
 curr_x = 0.0
@@ -56,17 +55,6 @@ class Robot():
                 marker = makeSprite("person_marker.png")
 
             print("marked")
-        # for i in range(len(information["objectsDetected"])):
-        #         # print(information["objectsDetected"][i])
-        #
-        #     if information["objectsDetected"][i] == "SUSPECT":
-        #         marker = makeSprite("suspect_marker.png")
-        #
-        #     elif information["objectsDetected"][i] == "PERSON":
-        #         marker = makeSprite("person_marker.png")
-        #
-        #     elif information["objectsDetected"][i] == "THREAT":
-        #         marker = makeSprite("threat_marker.png")
 
             distance_from_person = i["depth"]
             # print(distance_from_person)
@@ -167,7 +155,7 @@ def run():
                     scan_label = makeLabel("Scanning...",30,robot_curr_x+40,robot_curr_y-15)
                     showLabel(scan_label)
                     robot.detected_person(data)
-                    pause(10)
+                    pause(20)
                     hideLabel(scan_label)
 
                 print("done")
