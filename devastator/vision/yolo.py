@@ -37,7 +37,7 @@ THRESHOLD = 0.1
 device = 'CPU'  # GPU
 labels = './custom.names'  # set to None if no labels
 cpu_extension = '/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so'
-model_xml = './YoloV2_13000.xml'
+model_xml = './YoloV2_40000.xml'
 model_bin = os.path.splitext(model_xml)[0] + ".bin"
 
 
@@ -52,6 +52,6 @@ class YoloV3:
 
     def detect(self, rgb, depth, threshold=THRESHOLD):
         rgb, detections = detect(rgb, depth, self.net, self.exec, self.labels_map,
-                            prob_thresh=0.5, iou_thresh=0.4,
-                            depth_given=True)
+                                 prob_thresh=0.1, iou_thresh=0.4,
+                                 depth_given=True)
         return rgb,  detections

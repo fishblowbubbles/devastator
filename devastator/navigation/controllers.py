@@ -32,7 +32,7 @@ class FullStateFeedbackController(object):
         self.debug_states = kwds.get('debug_states', False)
 
         self._target = np.matrix([
-            [1.0],
+            [0.9],
             [0.0]
         ])
 

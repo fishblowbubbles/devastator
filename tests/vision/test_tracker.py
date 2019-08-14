@@ -41,6 +41,5 @@ if __name__ == "__main__":
         if markers:
             marker = markers[0]
             y = {'y' : np.array([[marker["distanceToMarker"]],
-                                        [marker["angleToMarker"]]])}
-            print("y", y)
+                                 [marker["angleToMarker"]]])}
             connect_and_send(y, host="localhost", port=56790)

@@ -171,12 +171,12 @@ if __name__ == "__main__":
             print("Marker: {}".format(marker))
 
             if marker:
-                # print("Heading towards marker {} ...".format(marker["id"]))
-                # connect_and_send({10: {3: 1}}, romeo.HOST, romeo.PORT) # revert to automatic
+                print("Heading towards marker {} ...".format(marker["id"]))
+                connect_and_send({10: {3: 1}}, romeo.HOST, romeo.PORT) # revert to automatic
 
-                # y = {'y' : np.array([[marker["distanceToMarker"]],
-                                    #  [marker["angleToMarker"] * 0.01745329252]])}
-                # connect_and_send(y, host="localhost", port=56790)
+                y = {'y' : np.array([[marker["distanceToMarker"]],
+                                     [marker["angleToMarker"] * 0.01745329252]])}
+                connect_and_send(y, host="localhost", port=56790)
 
                 marker["objectsDetected"] = []
                 connect_and_send(marker, host="192.168.1.136", port=8998)
@@ -197,20 +197,8 @@ if __name__ == "__main__":
                         index += 1
                     else:
                         print("Route complete, stopping ...")
-                        connect_and_send({7: {1: 0}}, romeo.AUTO_HOST, romeo.AUTO_PORT)
+                        connect_and_send({7: {1: 0}}, romeo.HOST, romeo.PORT)
                         complete = True
-                elif marker["angleToMarker"] > 5:
-                    print("Turning left!")
-                    connect_and_send({7: {1: 0}}, romeo.AUTO_HOST, romeo.AUTO_PORT)
-                    connect_and_send({7: {3: 0.40}}, romeo.AUTO_HOST, romeo.AUTO_PORT) # turn left
-                    time.sleep(0.25)
-                    connect_and_send({7: {3: 0}}, romeo.AUTO_HOST, romeo.AUTO_PORT)
-                elif marker["angleToMarker"] < -5:
-                    print("Turning right!")
-                    connect_and_send({7: {1: 0}}, romeo.AUTO_HOST, romeo.AUTO_PORT)
-                    connect_and_send({7: {3: -0.40}}, romeo.AUTO_HOST, romeo.AUTO_PORT) # turn right
-                    time.sleep(0.25)
-                    connect_and_send({7: {3: 0}}, romeo.AUTO_HOST, romeo.AUTO_PORT)
                 else:
                     print("Going forward!")
                     if not scanned:
@@ -221,22 +209,36 @@ if __name__ == "__main__":
                             # if cv2.waitK.ey(delay) == ord("q"):
                                 # break
                         scanned = True
-                    connect_and_send({7: {1: -0.4}}, romeo.AUTO_HOST, romeo.AUTO_PORT) # forward
+                    # connect_and_send({7: {1: -0.4}}, romeo.AUTO_HOST, romeo.AUTO_PORT) # forward
+                    # time.sleep(0.25)
+                """
+                elif marker["angleToMarker"] > 5:
+                    print("Turning left!")
+                    connect_and_send({7: {1: 0}}, romeo.AUTO_HOST, romeo.AUTO_PORT)
+                    connect_and_send({7: {3: 0.4}}, romeo.AUTO_HOST, romeo.AUTO_PORT) # turn left
                     time.sleep(0.25)
+                    connect_and_send({7: {3: 0}}, romeo.AUTO_HOST, romeo.AUTO_PORT)
+                elif marker["angleToMarker"] < -5:
+                    print("Turning right!")
+                    connect_and_send({7: {1: 0}}, romeo.AUTO_HOST, romeo.AUTO_PORT)
+                    connect_and_send({7: {3: -0.4}}, romeo.AUTO_HOST, romeo.AUTO_PORT) # turn right
+                    time.sleep(0.25)
+                    connect_and_send({7: {3: 0}}, romeo.AUTO_HOST, romeo.AUTO_PORT)
+                """
             else:
                 print("Searching for marker ...")
-                # connect_and_send({10: {2: 1}}, romeo.HOST, romeo.PORT) # send manual controls
+                connect_and_send({10: {2: 1}}, romeo.HOST, romeo.PORT) # send manual controls
                 if not complete:
-                    connect_and_send({7: {1: 0}}, romeo.AUTO_HOST, romeo.AUTO_PORT)
-                    connect_and_send({7: {3: -0.5}}, romeo.AUTO_HOST, romeo.AUTO_PORT)
+                    # connect_and_send({7: {1: 0}}, romeo.AUTO_HOST, romeo.AUTO_PORT)
+                    # connect_and_send({7: {3: -0.4}}, romeo.AUTO_HOST, romeo.AUTO_PORT)
+                    # time.sleep(0.2)
+                    # connect_and_send({7: {3: 0}}, romeo.AUTO_HOST, romeo.AUTO_PORT)
+                    # time.sleep(0.2)
+                    connect_and_send({7: {1: 0}}, romeo.HOST, romeo.PORT)
+                    connect_and_send({7: {3: -0.5}}, romeo.HOST, romeo.PORT)
+                    time.sleep(0.5)
+                    connect_and_send({7: {3: 0}}, romeo.HOST, romeo.PORT)
                     time.sleep(0.2)
-                    connect_and_send({7: {3: 0}}, romeo.AUTO_HOST, romeo.AUTO_PORT)
-                    time.sleep(0.3)
-                    # connect_and_send({7: {1: 0}}, romeo.HOST, romeo.PORT)
-                    # connect_and_send({7: {3: -0.5}}, romeo.HOST, romeo.PORT)
-                    # time.sleep(0.5)
-                    # connect_and_send({7: {3: 0}}, romeo.HOST, romeo.PORT)
-                    # time.sleSep(0.2)
 
             cv2.imshow("devastator", rgb)
             if cv2.waitKey(delay) == ord("q"):

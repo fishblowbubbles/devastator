@@ -8,6 +8,7 @@ from copy import deepcopy
 import pygame
 
 from robot.helpers import connect_and_send
+from robot import romeo
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 

@@ -38,7 +38,7 @@ def fix_perspective(img, src=INPUT_MAP, dst=OUTPUT_MAP,
 def split_rgbd(frames):
     rgb = frames[:, :, :3].astype(np.uint8)
     rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
-    depth = frames[:, :, 3].astype(np.uint8)
+    depth = frames[:, :, 3]
     return rgb, depth
 
 

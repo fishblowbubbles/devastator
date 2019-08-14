@@ -142,6 +142,20 @@ def intersection_over_union(box_1, box_2):
         return 0
     return area_of_overlap / area_of_union
 
+def intersection_over_box2(box_1, box_2):
+    width_of_overlap_area = min(box_1['xmax'], box_2['xmax']) - max(box_1['xmin'], box_2['xmin'])
+    height_of_overlap_area = min(box_1['ymax'], box_2['ymax']) - max(box_1['ymin'], box_2['ymin'])
+    if width_of_overlap_area < 0 or height_of_overlap_area < 0:
+        area_of_overlap = 0
+    else:
+        area_of_overlap = width_of_overlap_area * height_of_overlap_area
+    box_1_area = (box_1['ymax'] - box_1['ymin']) * (box_1['xmax'] - box_1['xmin'])
+    box_2_area = (box_2['ymax'] - box_2['ymin']) * (box_2['xmax'] - box_2['xmin'])
+    area_of_union = box_2_area 
+    if area_of_overlap == 0:
+        return 0
+    return area_of_overlap / area_of_union
+
 
 def load_model(device, labels, model_xml, model_bin, plugin_dir,
                cpu_extension='/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so'):
@@ -314,16 +328,21 @@ def detect(rgb, d, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_giv
         if detection["label"] == "Person":
             detection["equip"] = []
             detection["danger_score"] = 0
-            detection["depth"] = d[int((obj["ymax"] + obj["ymin"]) / 2)][int((obj["xmax"] + obj["xmin"]) / 2)] / 1000
+            detection["depth"] = depth[int((obj["ymax"] + obj["ymin"]) / 2)][int((obj["xmax"] + obj["xmin"]) / 2)] / 1000
             detection["h_angle"] = round((((obj["xmax"] + obj["xmin"]) / 2) - 640) * (87 / 1280), 2)
             people.append(detection)
         else:
             if detection["label"] in labels_to_save:
-               detection["image"] = original_image[obj["ymin"]:obj["ymax"],obj["xmin"]:obj["xmax"]][...,::-1]
+                imgymin = obj["ymin"]-10 if obj["ymin"]-10 > 0 else obj["ymin"]
+                imgymax = obj["ymax"]+10 if obj["ymax"]+10 < frame.shape[1] else obj["ymax"]
+                imgxmax = obj["xmax"]+10 if obj["xmax"]+10 < frame.shape[0] else obj["xmax"]
+                imgxmin = obj["xmin"]-10 if obj["xmin"]-10 < 0 else obj["xmin"]
+                detection["image"] = original_image[imgymin:imgymax,imgxmin:imgxmax][...,::-1]
+                print(depth[imgymin:imgymax,imgxmin:imgxmax])
             others.append(detection)
             cv2.rectangle(frame, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), color, 2)
-            cv2.putText(frame, det_label, (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
-            # cv2.putText(frame, det_label + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %' , (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
+            # cv2.putText(frame, det_label, (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
+            cv2.putText(frame, det_label + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %' , (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
 
     object_len = {"Handgun": 0.2, "Hat": 0.2, "Jacket": 0.8, "K nife": 0.1, "Rifle": 0.7, "Sunglasses": 0.05,
                   "Police": 1.7, "Face": 0.2}
@@ -336,12 +355,12 @@ def detect(rgb, d, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_giv
         count = 0
         likely = -1
         for j in range(len(people)):
-            if intersection_over_union(i["box"], people[j]["box"]) > 0:
-                est_diff = (expected_len(i["box"], people[j]["depth"]) - object_len[i["label"]]) ** 2
+            if intersection_over_box2(i["box"], people[j]["box"]) > 0:
+                est_diff = ((expected_len(i["box"], people[j]["depth"]) - object_len[i["label"]]) ** 2) * intersection_over_box2(i["box"], people[j]["box"])
                 print(i["label"], est_diff, expected_len(i["box"], people[j]["depth"]) - object_len[i["label"]])
                 if people[j]["depth"] != 0:
                     if min_diff > est_diff and est_diff < 15:
-                        min_diff = est_diff
+                        min_diff = est_diff 
                         likely = j
                 if count < 1 and est_diff < 16:
                     likely = j
@@ -360,8 +379,8 @@ def detect(rgb, d, net, exec_net, labels_map, prob_thresh, iou_thresh, depth_giv
             color = (0,255,0)
         obj = i["box"]
         cv2.rectangle(frame, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), color, 2)
-        cv2.putText(frame, i["label"], (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
-        # cv2.putText(frame, i["label"] + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %' + ' ' + str(i["depth"]) + " m", (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
+        # cv2.putText(frame, i["label"], (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
+        cv2.putText(frame, i["label"] + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %' + ' ' + str(i["depth"]) + " m", (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
 
     return frame, people
 

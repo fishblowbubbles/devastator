@@ -6,7 +6,7 @@ from robot import realsense
 from robot.helpers import get_data
 from vision.helpers import draw_markers, split_rgbd
 
-MARKER_LENGTH = 15.5    # cm
+MARKER_LENGTH = 8.1     # cm
 FOCAL_LENGTH  = 9.14715 # cm
 
 

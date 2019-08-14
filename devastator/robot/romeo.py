@@ -14,8 +14,8 @@ from robot.helpers import ConfigFile, recv_obj, connect_and_send
 CONFIG = ConfigFile("devastator/robot/config.ini")
 
 # HOST = "192.168.1.178"  # UP-Squared 1
-# HOST = "192.168.1.232"  # UP-Squared 2
-HOST = "localhost"
+HOST = "192.168.1.232"  # UP-Squared 2
+# HOST = "localhost"
 PORT = 6060
 
 AUTO_HOST = "localhost"
@@ -28,7 +28,7 @@ L_MOTOR, R_MOTOR = 1, 2
 L_POLARITY, R_POLARITY = -1, 1
 
 CONTROL_MODES = ["Joystick", "Trigger"]
-NAVIGATION_MODES = ["auto", "manual"]
+# NAVIGATION_MODES = ["manual", "auto"]
 
 
 class Romeo:
@@ -48,18 +48,18 @@ class Romeo:
         self.gamma = float(config.get("romeo", "gamma"))
         self.min_voltage = float(config.get("romeo", "minvoltage"))
         self.max_voltage = float(config.get("romeo", "maxvoltage"))
-        self.set_overshoot(int(config.get("romeo", "overshoot")))
+        self.set_overshoot(float(config.get("romeo", "overshoot")))
         self.set_voltage(L_MOTOR, float(config.get("romeo", "leftvoltage")))
         self.set_voltage(R_MOTOR, float(config.get("romeo", "rightvoltage")))
         self.enable_motors()
 
         self.change_direction = itertools.cycle([1, -1])
         self.change_control_mode = itertools.cycle(CONTROL_MODES)
-        self.change_navigation_mode = itertools.cycle(NAVIGATION_MODES)
+        # self.change_navigation_mode = itertools.cycle(NAVIGATION_MODES)
         
         self.direction = next(self.change_direction)
         self.control_mode = next(self.change_control_mode)
-        self.navigation_mode = next(self.change_navigation_mode)
+        self.navigation_mode = "auto"
 
         self.state = {
             xpad.L_JS_Y: 0,
@@ -79,9 +79,10 @@ class Romeo:
                 xpad.DPAD: self._handle_dpad                # adjust/trim motor voltage
             },
             xpad.BTN_DOWN: {
-                xpad.A_BTN : self._handle_a_btn,             # toggle direction (trigger mode only)
-                xpad.B_BTN : self._handle_b_btn,             # toggle control mode
-                xpad.SELECT: self._handle_select
+                xpad.A_BTN: self._handle_a_btn,             # toggle direction (trigger mode only)
+                xpad.B_BTN: self._handle_b_btn,             # toggle control mode
+                xpad.X_BTN: self._handle_x_btn,
+                xpad.Y_BTN: self._handle_y_btn
             }
         }
 
@@ -141,12 +142,15 @@ class Romeo:
             self.control_mode = next(self.change_control_mode)
             print("Control Mode      = {}".format(self.control_mode))
 
-    def _handle_select(self, value):
+    def _handle_x_btn(self, value):
         if value == xpad.DOWN:
-            self.navigation_mode = next(self.change_navigation_mode)
+            self.navigation_mode = "manual"
             print("Navigation Mode   = {}".format(self.navigation_mode))
-            connect_and_send({"mode": self.navigation_mode}, 
-                             self.ctrl_host, self.ctrl_port)
+
+    def _handle_y_btn(self, value):
+        if value == xpad.DOWN:
+            self.navigation_mode = "auto"
+            print("Navigation Mode   = {}".format(self.navigation_mode))
 
     def _handle_events(self, events):
         for key, inputs in events.items():
@@ -203,13 +207,14 @@ class Romeo:
     def _js_movement(self):
         forward_speed = self.state[xpad.L_JS_Y]
         turn_speed = self.state[xpad.R_JS_X]
-        l_motor_speed = forward_speed - turn_speed
-        r_motor_speed = forward_speed + turn_speed
+        l_motor_speed = np.clip(forward_speed - turn_speed, -1, 1)
+        r_motor_speed = np.clip(forward_speed + turn_speed, -1, 1)
         self.set_motors(l_motor_speed, r_motor_speed)
 
     def _trig_movement(self):
-        l_motor_speed = self.state[xpad.L_TRIG] * self.direction
-        r_motor_speed = self.state[xpad.R_TRIG] * self.direction
+        l_motor_speed = np.clip(self.state[xpad.L_TRIG] * self.direction, -1, 1)
+        r_motor_speed = np.clip(self.state[xpad.R_TRIG] * self.direction, -1, 1)
+        print(l_motor_speed, r_motor_speed)
         self.set_motors(l_motor_speed, r_motor_speed)
 
     def _execute_manual_movement(self):
@@ -220,21 +225,28 @@ class Romeo:
             self._trig_movement()
 
     def _execute_auto_movement(self, data):
+        """
         self.serial.read_all()
-        l_motor_speed = data["u_out"][0, 0]
-        r_motor_speed = data["u_out"][1, 0]    
+        l_motor_speed = data["u_out"][0, 0] * L_POLARITY
+        r_motor_speed = data["u_out"][1, 0] * R_POLARITY   
         self.set_speed(L_MOTOR, l_motor_speed)
         self.set_speed(R_MOTOR, r_motor_speed)
+        data = {"mode": self.navigation_mode}
+        connect_and_send(data, self.ctrl_host, self.ctrl_port)
         print("L: {}, R: {}".format(l_motor_speed, r_motor_speed))
+        """
+        self.serial.read_all()
+        if self.control_mode == "Joystick":
+            self._js_movement()
+        if self.control_mode == "Trigger":
+            self._trig_movement()
 
     def set_motors(self, l_motor_speed, r_motor_speed):
-        l_motor_speed *= L_POLARITY
-        r_motor_speed *= R_POLARITY
-        data = {"u_man": np.array([[l_motor_speed], 
-                                   [r_motor_speed]])}
+        data = {"u_man": np.array([[l_motor_speed], [r_motor_speed]]), 
+                "mode": self.navigation_mode}
         connect_and_send(data, self.ctrl_host, self.ctrl_port)
-        self.set_speed(L_MOTOR, l_motor_speed)
-        self.set_speed(R_MOTOR, r_motor_speed)
+        self.set_speed(L_MOTOR, l_motor_speed * L_POLARITY)
+        self.set_speed(R_MOTOR, r_motor_speed * R_POLARITY)
         
     def stop_motors(self):
         self.set_motors(0, 0)
@@ -263,6 +275,7 @@ class Romeo:
                 while True:
                     connection, _ = auto_server.accept()
                     data = recv_obj(connection)
+                    self._handle_events(data)
                     if self.navigation_mode == "auto":
                         self._execute_auto_movement(data)
             finally:

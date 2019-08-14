@@ -23,26 +23,32 @@ def get_data(host, port):
 
 
 def send_data(connection, data):
+    success = False
     try:
         connection.sendall(pickle.dumps(data))
         connection.shutdown(socket.SHUT_RDWR)
-        return True
+        success = True
     except ConnectionResetError:
         print("A connection was reset ...")
-        return False
     except BrokenPipeError:
         print("A pipe broke ...")
-        return False
+    finally:
+        return success
 
 
-def connect_and_send(data, host, port):
+def connect_and_send(data, host, port, timeout=0.5):
+    success = False 
     with socket.socket() as client:
         try:
+            client.settimeout(timeout)
             client.connect((host, port))
-            return send_data(client, data)
+            success = send_data(client, data)
         except ConnectionRefusedError:
             print("The connection was refused ...")
-            return False
+        except socket.timeout:
+            print("The connection timed out ...")
+        finally:
+            return success
 
 
 class ConfigFile:

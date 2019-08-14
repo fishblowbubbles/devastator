@@ -9,20 +9,20 @@ import robot.realsense as realsense
 from robot.helpers import get_data
 from vision.helpers import split_rgbd
 from vision.tracker import Tracker
-from vision.yolo import Darknet
+from vision.yolo import YoloV3
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--fps", type=int, default=realsense.FPS)
     args = parser.parse_args()
 
-    darknet, tracker = Darknet(), Tracker()
+    yolov3, tracker = YoloV3(), Tracker()
     delay = int(100 / args.fps)
 
     while True:
         frames = get_data(realsense.HOST, realsense.PORT)
         rgb, depth = split_rgbd(frames)
-        rgb, detections = darknet.detect(rgb, depth)
+        rgb, detections = yolov3.detect(rgb, depth)
         rgb, markers = tracker.detect(rgb, depth)
 
         cv2.imshow("vision", rgb)
