@@ -1,4 +1,6 @@
-# Project Structure
+# devastator
+
+## Project Structure
 
 ```
 ├── devastator
@@ -21,7 +23,7 @@
     └── vision
 ```
 
-# Important Notes
+## Important Notes
 
 1. Hardware devices are located in `devastator > robot`.
 2. With the exception of the Intel RealSense D435i, all hardware devices are run on separate processes and communicate via TCP/IP - their `host` and `port` numbers are located within their respective scripts.
@@ -29,7 +31,7 @@
 4. Ensure that import paths are relative to the `devastator` module. To test individual Python scripts, import and execute them from within the `tests`.folder.
 4. Add `udev` rules for the ReSpeaker - do not run the program as root or super user (because the Python dependencies are all over the place).
 
-# How To Run
+## How To Run
 
 To start the robot:
 ```
