@@ -1,5 +1,3 @@
-# devastator
-
 Read and follow **ALL** of these instructions carefully, otherwise I might eat you.
 
 ### Setting Up
