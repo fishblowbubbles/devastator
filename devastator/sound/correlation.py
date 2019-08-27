@@ -2,7 +2,7 @@ import os
 import wave
 from pprint import pprint
 
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import numpy as np
 import pyaudio
 from scipy import signal
@@ -32,7 +32,9 @@ class ReSpeaker(object):
                     channels = self.respeaker_channels,
                     input = True,
                     input_device_index = self.respeaker_index)
-            self.data = np.frombuffer(self.stream.read(self.chunk, exception_on_overflow =True), dtype = np.int16)[0::6]
+            self.data = np.frombuffer(self.stream.read(self.chunk,
+                        exception_on_overflow =True), dtype =
+                    np.int16)[0::self.respeaker_channels]
 
     def get_microphone_index(self):
         info = self.p.get_host_api_info_by_index(0)
@@ -44,8 +46,13 @@ class ReSpeaker(object):
                 device_name = device_info.get('name')
                 print("Input Device id ", i, " - ", device_name)
 
+                self.respeaker_channels = device_info['maxInputChannels']
+                self.respeaker_rate = int(device_info['defaultSampleRate'])
+
                 if device_name == 'ReSpeaker 4 Mic Array (UAC1.0)':
                     return i
+
+        return 0
 
     def get_input(self, wav_file = None):
         if wav_file:
@@ -54,8 +61,10 @@ class ReSpeaker(object):
                 self.data = self.data[:, 0]
 
         else:
-            while self.data.shape[0] < 163840:
-                inputs = np.frombuffer(self.stream.read(self.chunk, exception_on_overflow =False), dtype = np.int16)[0::6]
+            while self.data.shape[0] < self.template.shape[0]:
+                inputs = np.frombuffer(self.stream.read(self.chunk,
+                            exception_on_overflow =False), dtype =
+                        np.int16)[3::self.respeaker_channels]
                 # print(self.data.shape)
                 self.data = np.concatenate((self.data, inputs))
 
@@ -65,21 +74,22 @@ class ReSpeaker(object):
         def rms(d):
             return (sum(d ** 2) / len(d)) ** 0.5
 
-        output = data / max(data)
-        output = output * rms(output)
+#         output = data / max(data)       # 32767
+#         output = output * rms(output)   # 0.0707665
+
+        output = data / 60000 * 0.0707665
 
         return output
 
     def get_correlation(self):
         data = self.normalize(self.data)
-
         correlation = signal.correlate(data, self.template, mode = 'same')
         max_filtered = max_filter(correlation, 2000)
         # thresh = max_filtered > .38
 
-        # self.plot(data, max_filtered)
-
-        return np.amax(max_filtered) > .5
+#         self.plot(data, max_filtered)
+        self.data = np.empty(1)
+        return np.amax(max_filtered)
 
     def plot(self, data, max_filtered):
         plt.clf()
@@ -90,9 +100,10 @@ class ReSpeaker(object):
         plt.subplot(212)
         plt.plot(max_filtered)
 
-        plt.show()
+#         plt.pause(0.05)
+#         plt.show()
 
-        truncated_data = self.data[-80000:]
+        truncated_data = self.data[-self.data.shape[0] // 2:]
 
         self.data = truncated_data
 
@@ -168,11 +179,16 @@ class ReSpeaker(object):
 
 
 if __name__ == '__main__':
-    respeaker = ReSpeaker(with_microphone = False, template_path = 'devastator/sound/data/normalized_template.wav')
-    respeaker.get_input("devastator/sound/data/Rifle,Bolt Action,.30-06,Arisaka,Gunshot,Processed,3,Medium Distant.wav")
-    print(respeaker.get_correlation())
+    respeaker = ReSpeaker(with_microphone = True, template_path =
+            'data/Handgun,Pistol,Semi Automatic_normalized_template.wav')
+#     respeaker.get_input("devastator/sound/data/Rifle,Bolt Action,.30-06,Arisaka,Gunshot,Processed,3,Medium Distant.wav")
+    index = 0
 
-    # respeaker.record_and_save(record_seconds = 5)
+    while True:
+        respeaker.get_input()
+        print(index, respeaker.get_correlation())
+        index += 1
+#     respeaker.record_and_save(record_seconds = 5)
     # while True:
     #     respeaker.get_input('Processed, Airborne/Handgun, Pistol, Revolver/Handgun,Pistol,Revolver,Double Action,.38 Special,Smith  Wesson 642,Gunshot,Processed,1,Close.wav')
     #     respeaker.get_correlation()

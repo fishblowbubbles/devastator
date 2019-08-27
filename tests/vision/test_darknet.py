@@ -4,24 +4,24 @@ import sys
 sys.path.append("./devastator")
 
 import cv2
-import numpy as np
 
 import robot.realsense as realsense
 from robot.helpers import get_data
-from vision.darknet import darknet
-from vision.helpers import Annotator, darknet_detect, darknet_livestream, load_darknet
+from vision import yolo
+from vision.helpers import livestream, split_rgbd
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", action="store_true")
-    parser.add_argument("--fps", type=int, default=darknet.FPS)
-    parser.add_argument("--thresh", type=float, default=darknet.THRESH)
+    parser.add_argument("--fps", type=int, default=realsense.FPS)
+    parser.add_argument("--threshold", type=float, default=yolo.THRESHOLD)
     args = parser.parse_args()
 
-    net, meta, annotator = load_darknet()
+    darknet = yolo.Darknet()
     if args.video:
-        darknet_livestream(net, meta, annotator, thresh=args.thresh, fps=args.fps)
+        livestream(darknet.detect, fps=args.fps, threshold=args.threshold)
     else:
-        rgbd = get_data(realsense.HOST, realsense.PORT)
-        darknet_detect(net, meta, rgbd, annotator, thresh=args.thresh)
+        frames = get_data(realsense.HOST, realsense.PORT)
+        rgb, depth = split_rgbd(frames)
+        darknet.detect(rgb, depth, threshold=args.threshold)
         cv2.waitKey(0)

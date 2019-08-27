@@ -1,123 +1,42 @@
-# devastator
-
-Read and follow **ALL** of these instructions carefully, otherwise I might eat you.
-
-### Setting Up
-
-Clone this repository.
-```
-git clone https://github.com/fishblowbubbles/devastator.git
-cd devastator
-```
-Switch to the `develop` branch.
-```
-git checkout develop
-```
-Setup your virtual environment (Python 3.6, please), activate it and install the requirements.
-```
-pip install virtualenv
-virtualenv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-Create and switch to a local branch.
-```
-git checkout -b <your-branch-name>
-```
-When you've finished, leave your virtual environment. Remember to activate it again the next time you work on this project.
-```
-deactivate
-```
-
-### Commit, Merge & Push
-
-Make sure you are working on your local branch and using this project's virtual environment. If untrue, do not proceed.
-```
-git status
-```
-Switch to remote and pull, to make sure you that you are at the tip of the branch. Install the latest requirements.
-```
-git checkout develop
-git pull origin develop
-pip install -r requirements.txt
-```
-Return to your local branch.
-```
-git checkout <your-branch-name>
-```
-Update project requirements (from top-level directory). Include your temporary folders in `.gitignore`, if any.
-```
-pip freeze > requirements.txt
-```
-Add your changes.
-```
-git add <your-file-name>
-```
-If there are files you don't want to upload yet, stash them away before you commit.
-```
-git stash
-git commit -m <your-commit-message>
-```
-Rebase, switch to the remote branch, merge and push.
-```
-git rebase develop
-git checkout develop
-git merge <your-branch-name>
-git push origin develop
-```
-Remove your local branch if you've no more updates.
-```
-git branch -d <your-branch-name>
-```
-If you still have stashed files, pop them and keep working.
-```
-git checkout <your-branch-name>
-git stash pop
-```
-
-### Good Practices
-
-1.  Don't work on the remote branch.
-
-2.  You can upload any number of new files, but commits should be at most for files within the same module (i.e. robot, sound, vision). Create separate local branches for each module and commit them individually if possible.
-
-3.  Keep the lifespan of your local branch short. Ideally, 1 per new feature, cleaning it up after your commit and starting afresh (with a pull of the remote branch).
-
-### Project Structure
+# Project Structure
 
 ```
-devastator
 ├── devastator
 │   ├── app
-│   │   └── __init__.py
-│   ├── helpers.py
 │   ├── __init__.py
 │   ├── main.py
+│   ├── navigation
 │   ├── robot
-│   │   ├── __init__.py
-│   │   ├── realsense.py
-│   │   ├── respeaker.py
-│   │   └── romeo.py
 │   ├── sound
-│   │   └── __init__.py
 │   └── vision
-│       ├── darknet
-│       ├── darknet.py
-│       ├── helpers.py
-│       └── __init__.py
 ├── docs
 ├── readme.md
 ├── requirements.txt
 ├── scripts
+│   └── arduino
 └── tests
+    ├── app
     ├── robot
-    │   ├── test_realsense.py
-    │   ├── test_respeaker.py
-    │   └── test_romeo.py
     ├── sound
-    │   ├── test_correlation.py
-    │   └── test_vokaturi.py
     └── vision
-        ├── test_face_detection.py
-        └── test_yolo.py
+```
+
+# Important Notes
+
+1. Hardware devices are located in `devastator > robot`.
+2. With the exception of the Intel RealSense D435i, all hardware devices are run on separate processes and communicate via TCP/IP - their `host` and `port` numbers are located within their respective scripts.
+3. External packages and libraries are located within their respective folders (e.g. the Vokaturi library is in the `sound` module).
+4. Ensure that import paths are relative to the `devastator` module. To test individual Python scripts, import and execute them from within the `tests`.folder.
+4. Add `udev` rules for the ReSpeaker - do not run the program as root or super user (because the Python dependencies are all over the place).
+
+# How To Run
+
+To start the robot:
+```
+python3 devastator/main.py --robot
+```
+
+To start the manual controller:
+```
+python3 tests/robot/test_xpad.py
 ```

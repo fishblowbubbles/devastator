@@ -1,0 +1,95 @@
++<!--include auto refresh-->
+<!--Finalised UI with autorefresh function-->
+<!DOCTYPE html>
+ <html>
+      <head>
+           <title>Report Logs</title>
+           <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css" />
+           <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+           <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+           <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/r/bs-3.3.5/jq-2.1.4,dt-1.10.8/datatables.min.css"/>
+           <script type="text/javascript" src="https://cdn.datatables.net/r/bs-3.3.5/jqc-1.11.3,dt-1.10.8/datatables.min.js"></script>
+      </head>
+      <body>
+           <br /><br />
+           <center><h1>Report Logs</h1></center>
+
+<div class="container">
+  <div class="panel">
+    <!--<center><button id="loadData" class="btn btn-default">Load Data</button></center>-->
+    <br /><br />
+    <table id="example" class="display" cellspacing="0" width="100%">
+      <thead>
+        <tr>
+            <th>Time Stamp</th>
+            <th>Status of Targets</th>
+            <th>Detected Emotions</th>
+            <th>Presence of Gunshots</th>
+            <th>Direction of Gunshots</th>
+            <th>Objects of Interest</th>
+            <th>Identity of Targets</th>
+            <th>Gun Models Detected</th>
+        </tr>
+      </thead>
+    </table>
+  </div>
+</div>
+      </body>
+ </html>
+ <script>
+$(function() {
+  $("#example").DataTable();
+
+  // Premade test data, you can also use your own
+  <!--var testDataUrl = "https://raw.githubusercontent.com/chennighan/RapidlyPrototypeJavaScript/master/lesson4/data.json"-->
+  <!--var testDataUrl = "https://api.myjson.com/bins/1ghcd9"-->
+   var testDataUrl = "http://127.0.0.1:5000/index_get_data"
+
+  $("#loadData").click(function() {
+    loadData();
+  });
+
+setInterval( function () {
+        $.ajax({
+      type: 'GET',
+      url: testDataUrl,
+      contentType: "text/plain",
+      dataType: 'json',
+      success: function (data) {
+        myJsonData = data;
+        console.log(myJsonData);
+        populateDataTable(myJsonData);
+      },
+      error: function (e) {
+        console.log("There was an error with your request...");
+        console.log("error: " + JSON.stringify(e));
+      }
+    });
+}, 3000 );
+
+  // populate the data table with JSON data
+  function populateDataTable(data) {
+    console.log("populating data table...");
+    // clear the table before populating it with more data
+    $("#example").DataTable().clear();
+    var length = Object.keys(data.data).length;
+    for(var i = 1; i < length+1; i++) {
+      var customer = data.data[i];
+      console.log(customer);
+
+      // You could also use an ajax property on the data table initialization
+      $('#example').dataTable().fnAddData( [
+        customer.Time_Stamp,
+        customer.Status_Targets,
+        customer.Emotions_Present,
+        customer.Gunshots,
+        customer.Threat_Direction,
+        customer.Objects_Of_Interest,
+        customer.Persons_Detected,
+        customer.Guns_Model
+      ]);
+    }
+  }
+})();
+
+ </script>

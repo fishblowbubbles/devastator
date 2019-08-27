@@ -5,7 +5,7 @@ PORT = 8998
 
 #Assuming data sent is in the form of distance,angle
 
-data = {"action":("moving") ,"marker":(2),"distanceToMarker":(4),"angleToMarker":(60)}
+data = {"marker":(2),"distanceToMarker":(4),"angleToMarker":(60), "objectsDetected":("PERSON"),"distanceToObject":(2),"angletoObject":(20)}
 # data = {"action":("scanning") ,"objectsDetected":("THREAT"),"distanceToObject":(200),"angletoObject":(20)}
 # data = {"action":("scanning") ,"objectsDetected":("PERSON"),"distanceToObject":(2),"angletoObject":(20)}
 #Note:

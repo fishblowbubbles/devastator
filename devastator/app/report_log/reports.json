@@ -1,0 +1,14 @@
+{
+    "data": {
+        "0": {
+            "Time_Stamp": "%Y-%m-%d %H:%M:%S",
+            "Status_Targets": "THREAT/SUSPECT/HOSTAGE",
+            "Emotions_Present": "Emotion",
+            "Gunshots": "True/False",
+            "Threat_Direction": "Angle in Degrees (gunshot direction)",
+            "Objects_Of_Interest": "Handgun: - <p/> Hat: - <p/> Jacket: - <p/> Knife: - <p/> Person: 2 <p/> Rifle: - <p/> Sunglasses: - <p/> Police: -",
+            "Persons_Detected": "Name, Confidence Level",
+            "Guns_Model": "Gun Types"
+        }
+    }
+}

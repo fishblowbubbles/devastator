@@ -1,6 +1,7 @@
 import pickle
 import socket
-from multiprocessing import Process, Queue
+from queue import Queue
+from threading import Thread
 
 import numpy as np
 import pyrealsense2 as rs
@@ -8,11 +9,14 @@ import pyrealsense2 as rs
 from robot.helpers import recv_obj, send_data
 
 HOST = "localhost"
-PORT = 4444
+PORT = 4040
+
+RESOLUTION = (1280, 720)
+FPS, FOV = 30, 87.0
 
 
 class D435i():
-    def __init__(self, host, port):
+    def __init__(self, host=HOST, port=PORT):
         self.host, self.port = host, port
         self.requests = Queue()
 
@@ -20,10 +24,15 @@ class D435i():
         self.pipeline = rs.pipeline()
         self.pipeline.start()
 
+    def _get_frames(self):
+        frames = self.pipeline.wait_for_frames()
+        frames = self.align.process(frames)
+        return frames
+
     def _frames_to_rgbd(self, frames):
         rgb, d = frames.get_color_frame(), frames.get_depth_frame()
         rgb, d = np.array(rgb.get_data()), np.array(d.get_data())
-        d = d.reshape((720, 1280, 1))
+        d = np.expand_dims(d, axis=2)
         rgbd = np.concatenate((rgb, d), axis=2)
         return rgbd
 
@@ -34,26 +43,22 @@ class D435i():
             send_data(connection, rgbd)
 
     def _start_server(self):
-        server = socket.socket()
-        server.bind((self.host, self.port))
-        try:
+        with socket.socket() as server:
+            server.bind((self.host, self.port))
             server.listen()
             while True:
                 connection, _ = server.accept()
                 self.requests.put(connection)
-        finally:
-            server.shutdown(socket.SHUT_RDWR)
-            server.close()
 
     def run(self):
-        server = Process(target=self._start_server)
+        server = Thread(target=self._start_server)
         server.daemon = True
         server.start()
         try:
             while True:
-                frames = self.pipeline.wait_for_frames()
-                frames = self.align.process(frames)
-                self._process_requests(frames)
+                frames = self._get_frames()
+                if not self.requests.empty():
+                    self._process_requests(frames)
         finally:
             self.pipeline.stop()
-            server.terminate()
+            server._stop()

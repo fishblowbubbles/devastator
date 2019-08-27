@@ -4,10 +4,10 @@ import socket
 import time
 
 
-def recv_obj(s):
+def recv_obj(connection):
     packets = []
     while True:
-        packet = s.recv(1024)
+        packet = connection.recv(1024)
         if not packet:
             break
         packets.append(packet)
@@ -23,22 +23,32 @@ def get_data(host, port):
 
 
 def send_data(connection, data):
+    success = False
     try:
         connection.sendall(pickle.dumps(data))
         connection.shutdown(socket.SHUT_RDWR)
+        success = True
     except ConnectionResetError:
         print("A connection was reset ...")
     except BrokenPipeError:
         print("A pipe broke ...")
+    finally:
+        return success
 
 
-def connect_and_send(data, host, port):
+def connect_and_send(data, host, port, timeout=0.5):
+    success = False 
     with socket.socket() as client:
         try:
+            client.settimeout(timeout)
             client.connect((host, port))
-            send_data(client, data)
+            success = send_data(client, data)
         except ConnectionRefusedError:
             print("The connection was refused ...")
+        except socket.timeout:
+            print("The connection timed out ...")
+        finally:
+            return success
 
 
 class ConfigFile:

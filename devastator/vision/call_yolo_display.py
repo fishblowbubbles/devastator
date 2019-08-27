@@ -12,6 +12,7 @@ import socket
 import pickle
 import math
 from PIL import Image
+import pyrealsense2 as rs
 from openvino.inference_engine import IENetwork, IEPlugin
 
 
@@ -204,9 +205,9 @@ def main():
     PORT = 4444
 
     device = 'GPU'	#GPU
-    labels = './custom.names' #set to None if no labels
+    labels = '../../custom.names' #set to None if no labels
     cpu_extension = '/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so'
-    model_xml = './YoloV2_18000.xml'
+    model_xml = '../../YoloV2_18000.xml'
     model_bin = os.path.splitext(model_xml)[0] + ".bin"
 
     input_blob, net, exec_net = load_model(device, labels, model_xml, model_bin, plugin_dir = None, cpu_extension = cpu_extension)
@@ -221,6 +222,7 @@ def main():
         labels_map = None
 
     if args.input == "rs":
+        align = rs.align(rs.stream.color)
         pipeline = rs.pipeline()
         config = rs.config()
         config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
@@ -244,7 +246,9 @@ def main():
     if number_input_frames != 1:
         if args.input == "rs":
             frames = pipeline.wait_for_frames()
+            frames = align.process(frames)
             color_frame = frames.get_color_frame()
+            d = np.array(frames.get_depth_frame().get_data())
             frame = np.array(color_frame.get_data())
             ret = True
         elif args.input == "server":
@@ -277,6 +281,8 @@ def main():
         if args.input == "rs":
             frames = pipeline.wait_for_frames()
             color_frame = frames.get_color_frame()
+            frames = align.process(frames)
+            d = np.array(frames.get_depth_frame().get_data())
             if not color_frame:
                 continue
             next_frame = np.array(color_frame.get_data())
@@ -397,20 +403,20 @@ def main():
                 detection["depth"] = d[int((obj["ymax"]+obj["ymin"])/2)][int((obj["xmax"] + obj["xmin"])/2)]/1000
                 people.append(detection)
             else:
-                if detection["label"] in labels_to_save:
-                    detection["image"] = original_image[obj["ymin"]-30:obj["ymax"]+30,obj["xmin"]-30:obj["xmax"]+30][...,::-1]
+#                if detection["label"] in labels_to_save:
+#                    detection["image"] = original_image[obj["ymin"]-30:obj["ymax"]+30,obj["xmin"]-30:obj["xmax"]+30][...,::-1]
                     
                
-                    img = Image.fromarray(detection["image"])
-                    img.save("example.png")
-                    data = np.log(np.stack([d[(obj["ymin"]-30):(obj["ymax"]+30),(obj["xmin"]-30):(obj["xmax"] +30)]/1000 for i in range(3)], axis = 2) + 1)
-                    np.set_printoptions(threshold=sys.maxsize)
-                    print(d[(obj["ymin"]-10):(obj["ymax"]+10),(obj["xmin"]-10):(obj["xmax"]+10)]/1000)
-                    data = data / data.max()
-                    data = 255 * data
-                    depth = data.astype(np.uint8)
-                    depthimg = Image.fromarray(depth)
-                    depthimg.save("exampled.png")
+#                    img = Image.fromarray(detection["image"])
+ #                   img.save("example.png")
+  #                  data = np.log(np.stack([d[(obj["ymin"]-30):(obj["ymax"]+30),(obj["xmin"]-30):(obj["xmax"] +30)]/1000 for i in range(3)], axis = 2) + 1)
+   #                 np.set_printoptions(threshold=sys.maxsize)
+    #                print(d[(obj["ymin"]-10):(obj["ymax"]+10),(obj["xmin"]-10):(obj["xmax"]+10)]/1000)
+     #               data = data / data.max()
+      #              data = 255 * data
+       #             depth = data.astype(np.uint8)
+        #            depthimg = Image.fromarray(depth)
+         #           depthimg.save("exampled.png")
                     
                 others.append(detection)
                 cv2.rectangle(frame, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), color, 2)
@@ -429,6 +435,7 @@ def main():
             likely = -1
             for j in range(len(people)):
                 if intersection_over_union(i["box"], people[j]["box"]) > 0:
+                   
                     est_diff = (expected_len(i["box"], people[j]["depth"]) - object_len[i["label"]])**2
                     print(i["label"], est_diff, expected_len(i["box"], people[j]["depth"]) - object_len[i["label"]])
                     if people[j]["depth"] != 0:
