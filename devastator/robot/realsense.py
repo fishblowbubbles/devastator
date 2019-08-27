@@ -20,12 +20,9 @@ class D435i():
         self.host, self.port = host, port
         self.requests = Queue()
 
-        self.config = rs.config()
-        self.config.enable_device("841612071395")
-
         self.align = rs.align(rs.stream.color)
         self.pipeline = rs.pipeline()
-        self.profile = self.pipeline.start(self.config)
+        self.pipeline.start()
 
     def _get_frames(self):
         frames = self.pipeline.wait_for_frames()
@@ -36,7 +33,6 @@ class D435i():
         rgb, d = frames.get_color_frame(), frames.get_depth_frame()
         rgb, d = np.array(rgb.get_data()), np.array(d.get_data())
         d = np.expand_dims(d, axis=2)
-        # d = d.reshape((720, 1280, 1))
         rgbd = np.concatenate((rgb, d), axis=2)
         return rgbd
 

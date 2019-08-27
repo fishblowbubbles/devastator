@@ -1,8 +1,5 @@
-import argparse
 import itertools
-import pickle
 import socket
-import sys
 
 import serial
 import numpy as np

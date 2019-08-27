@@ -1,5 +1,3 @@
-import argparse
-import pickle
 import socket
 from collections import deque
 from queue import Queue
@@ -10,9 +8,8 @@ import pyaudio
 import usb
 from scipy.io import wavfile
 
-from robot.helpers import recv_obj, send_data
+from robot.helpers import send_data
 from robot.micarray import tuning
-from robot.pixel_ring import pixel_ring
 
 HOST = "localhost"
 # PORT = 5050

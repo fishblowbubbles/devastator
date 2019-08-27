@@ -1,6 +1,4 @@
-import argparse
 import os
-import pickle
 import socket
 import time
 from copy import deepcopy
@@ -85,3 +83,4 @@ class XPad:
     def run(self):
         while True:
             self._send_inputs()
+            time.sleep(1 / POLLING_RATE)
